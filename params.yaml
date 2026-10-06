@@ -2,3 +2,8 @@ data:
   ckan_base: https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/
   package_id: ttc-bus-delay-data
   historical_years: [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+
+clean:
+  min_delay: 0          # drop negative delays
+  max_delay: 300        # drop delays above 5 hours as recording errors
+  drop_zero_delay: false
