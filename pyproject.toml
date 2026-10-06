@@ -5,6 +5,7 @@ description = "AI-assisted public transport information system: transit delay pr
 requires-python = ">=3.11"
 dependencies = [
     "dvc>=3.67.1",
+    "dvc-s3>=3.3.0",
     "holidays>=0.106",
     "jupyter>=1.1.1",
     "lightgbm>=4.7.0",
