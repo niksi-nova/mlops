@@ -1,0 +1,4 @@
+data:
+  ckan_base: https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/
+  package_id: ttc-bus-delay-data
+  historical_years: [2018, 2019, 2020, 2021, 2022, 2023, 2024]

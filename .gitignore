@@ -45,3 +45,6 @@ mlartifacts/
 .vscode/
 .idea/
 .DS_Store
+
+# Partial downloads (src/data/ingest.py writes here before renaming)
+*.part

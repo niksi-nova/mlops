@@ -5240,6 +5240,7 @@ dependencies = [
     { name = "requests" },
     { name = "scikit-learn" },
     { name = "seaborn" },
+    { name = "tabulate" },
     { name = "xgboost", version = "3.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "xgboost", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
@@ -5260,6 +5261,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.34.2" },
     { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
+    { name = "tabulate", specifier = ">=0.10.0" },
     { name = "xgboost", specifier = ">=3.2.0" },
 ]
 
