@@ -18,7 +18,7 @@
       "max": "2024-12-31 23:39:00-05:00"
     }
   },
-  "n_features": 21,
+  "n_features": 25,
   "n_kept_routes": 240,
   "n_kept_locations": 629,
   "other_share": {

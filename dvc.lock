@@ -108,8 +108,8 @@ stages:
       size: 8312771
     - path: src/features/build_features.py
       hash: md5
-      md5: fb9729a9118e1d3ce2ce2be97c4ef049
-      size: 8532
+      md5: 7f9e44f1d1970e9688da12f2f6608d4b
+      size: 12937
     - path: src/features/time_features.py
       hash: md5
       md5: 59d46a0513c6bbf0080f77f1ed485e34
@@ -125,50 +125,52 @@ stages:
           heavy_precip_mm: 2.5
           covid_start: '2020-03-15'
           covid_end: '2021-12-31'
+          te_smoothing: 20
+          te_folds: 5
     outs:
     - path: data/processed/feature_spec.json
       hash: md5
-      md5: b02d622b37397fa038e36881f8d13354
-      size: 18529
+      md5: 6c7b56632955ed2fdbe48aa01b30584b
+      size: 265394
     - path: data/processed/test.parquet
       hash: md5
-      md5: 9d57c1fb9397ba6f5f8ec65f9be4c8d3
-      size: 836197
+      md5: 32bccd409e0e9897a0342f38461ec450
+      size: 1087718
     - path: data/processed/train.parquet
       hash: md5
-      md5: 509245528094c76e0e6ad2e77582fde2
-      size: 3474446
+      md5: 2b31a6b8da189e31868badd1e6abb764
+      size: 5040063
     - path: data/processed/val.parquet
       hash: md5
-      md5: fbef5a27718791662ae6ef3902d22a8a
-      size: 797290
+      md5: be3cc0ce9879635bb9dc522e42b53a80
+      size: 1037174
     - path: reports/featurize_report.json
       hash: md5
-      md5: 78186ca74c60841c32c40a3f12ae98e5
+      md5: a11fefe931245d749e0fc6ad15687db8
       size: 787
   train:
     cmd: uv run python -m src.models.train
     deps:
     - path: data/processed/feature_spec.json
       hash: md5
-      md5: b02d622b37397fa038e36881f8d13354
-      size: 18529
+      md5: 6c7b56632955ed2fdbe48aa01b30584b
+      size: 265394
     - path: data/processed/train.parquet
       hash: md5
-      md5: 509245528094c76e0e6ad2e77582fde2
-      size: 3474446
+      md5: 2b31a6b8da189e31868badd1e6abb764
+      size: 5040063
     - path: data/processed/val.parquet
       hash: md5
-      md5: fbef5a27718791662ae6ef3902d22a8a
-      size: 797290
+      md5: be3cc0ce9879635bb9dc522e42b53a80
+      size: 1037174
     - path: src/models/tracking.py
       hash: md5
-      md5: ffe82b86c4c112fbd87eca05b000622f
-      size: 3428
+      md5: bfe25afbe3a25f956b9e00769fa4f11e
+      size: 4004
     - path: src/models/train.py
       hash: md5
-      md5: 221dd5f9aaa09770b14c72653a163e6e
-      size: 15409
+      md5: f004acf00bba901fd45a42c02919e90e
+      size: 18697
     params:
       params.yaml:
         train:
@@ -189,12 +191,21 @@ stages:
             subsample: 0.8
             colsample_bytree: 0.8
             early_stopping_rounds: 100
+          lightgbm_l1:
+            n_estimators: 2000
+            learning_rate: 0.05
+            num_leaves: 63
+            min_child_samples: 50
+            subsample: 0.8
+            colsample_bytree: 0.8
+            early_stopping_rounds: 100
+            objective: l1
     outs:
     - path: models/best_model.joblib
       hash: md5
-      md5: 549221a252faf899fe93b06891745062
-      size: 2197921
+      md5: 8e6e50bc4e4691ea2f77ff99b8aa5684
+      size: 8084329
     - path: reports/train_metrics.json
       hash: md5
-      md5: fdeb17bc9ccc44e713e1519058b3f6d1
-      size: 1176
+      md5: a6c180907658f074e218672ed3396275
+      size: 1765

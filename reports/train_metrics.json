@@ -6,33 +6,50 @@
       "val_r2": 0.31803572885463915,
       "val_median_ae": 3.16267942583732,
       "train_mae": 7.215674544111788,
-      "training_time_seconds": 0.045791374999680556
+      "training_time_seconds": 0.05013454199797707
+    },
+    "global_median": {
+      "val_mae": 9.77323406573452,
+      "val_rmse": 24.878136981192633,
+      "val_r2": -0.08735537549885097,
+      "val_median_ae": 5.0,
+      "train_mae": 9.041441387804614,
+      "training_time_seconds": 0.007372125000983942
     },
     "ridge": {
-      "val_mae": 8.161724799117017,
-      "val_rmse": 21.429388191734667,
-      "val_r2": 0.19321959687800516,
-      "val_median_ae": 3.429350669959854,
-      "train_mae": 7.277352374229453,
-      "training_time_seconds": 2.7521902920016146
+      "val_mae": 8.152995296950653,
+      "val_rmse": 21.375726575900856,
+      "val_r2": 0.19725507695834643,
+      "val_median_ae": 3.396239546062084,
+      "train_mae": 7.188286268868774,
+      "training_time_seconds": 3.700914458997431
     },
     "random_forest": {
-      "val_mae": 8.134670575750418,
-      "val_rmse": 21.36261394624155,
-      "val_r2": 0.19823963935987077,
-      "val_median_ae": 3.3403299319028434,
-      "train_mae": 5.834268730476182,
-      "training_time_seconds": 32.25015904199972
+      "val_mae": 7.923925072519808,
+      "val_rmse": 21.204004911421215,
+      "val_r2": 0.21010095528341222,
+      "val_median_ae": 3.191064984247342,
+      "train_mae": 5.602886148589801,
+      "training_time_seconds": 41.59846008299792
     },
     "lightgbm": {
-      "val_mae": 7.847488487892968,
-      "val_rmse": 21.122780259845452,
-      "val_r2": 0.21614098308030005,
-      "val_median_ae": 3.1063756701352236,
-      "train_mae": 6.388275439900206,
-      "training_time_seconds": 6.542077457997948
+      "val_mae": 7.870803845115575,
+      "val_rmse": 21.186035827255612,
+      "val_r2": 0.21143916929607065,
+      "val_median_ae": 3.1166332590343853,
+      "train_mae": 6.371926344950241,
+      "training_time_seconds": 5.613568959000986
+    },
+    "lightgbm_l1": {
+      "val_mae": 7.408440143937742,
+      "val_rmse": 20.472793192215644,
+      "val_r2": 0.2636403288772716,
+      "val_median_ae": 2.407224204733357,
+      "train_mae": 6.059196271774948,
+      "training_time_seconds": 24.16775470900029
     }
   },
-  "best_model": "lightgbm",
-  "mae_improvement_pct_over_naive": 3.2819258084822787
+  "best_model": "lightgbm_l1",
+  "mae_improvement_pct_over_naive": 8.693072364458427,
+  "mae_improvement_pct_over_global_median": 24.19663650631137
 }
