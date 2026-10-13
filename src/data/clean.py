@@ -133,15 +133,21 @@ def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return standardised
 
 
-def normalise_time_string(value: str) -> str:
+def normalise_time_string(value: object) -> object:
     """Pad a time string to HH:MM:SS so every row uses the same format
-    before parsing (the raw files mix "HH:MM" and "HH:MM:SS")."""
+    before parsing (the raw files mix "HH:MM" and "HH:MM:SS").
+
+    A missing value (NaN, None, "", "nan") is passed through as pd.NA so
+    the caller ends up with a missing timestamp instead of a fabricated
+    one."""
+    if pd.isna(value) or str(value).strip().lower() in ("", "nan", "none"):
+        return pd.NA
     parts = value.split(":")
     parts = (parts + ["00", "00"])[:3] if len(parts) < 3 else parts[:3]
     try:
         return ":".join(p.zfill(2) for p in parts)
     except (ValueError, AttributeError):
-        return "00:00:00"
+        return pd.NA
 
 
 def build_timestamp(df: pd.DataFrame) -> pd.DataFrame:

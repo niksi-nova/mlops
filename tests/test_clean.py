@@ -100,13 +100,6 @@ def test_time_unparseable_text_becomes_nat_downstream():
     assert out["timestamp"].isna().all()
 
 
-@pytest.mark.xfail(
-    reason="SUSPECTED BUG: a missing Time value stays NaN after astype(str) "
-    "(pandas 3), so normalise_time_string calls .split on a float and "
-    "build_timestamp raises AttributeError instead of producing NaT",
-    raises=AttributeError,
-    strict=True,
-)
 def test_time_missing_value_becomes_nat_downstream():
     df = pd.DataFrame({"date": ["2024-01-05"], "time": [None]})
     out = build_timestamp(df)
