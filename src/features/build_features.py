@@ -28,8 +28,10 @@ import sys
 from pathlib import Path
 
 import holidays
+import numpy as np
 import pandas as pd
 import yaml
+from sklearn.model_selection import KFold
 
 from src.features.time_features import add_time_features
 
@@ -51,7 +53,15 @@ TIME_NUMERIC_FEATURES = [
     "hour_sin", "hour_cos", "month_sin", "month_cos",
 ]
 FLAG_FEATURES = ["is_holiday", "covid_period", "is_snowing", "heavy_precip"]
-NUMERIC_FEATURES = WEATHER_NUMERIC_FEATURES + TIME_NUMERIC_FEATURES + FLAG_FEATURES
+TARGET_ENCODING_GROUPS: dict[str, list[str]] = {
+    "te_route": ["route"],
+    "te_incident": ["incident"],
+    "te_location": ["location"],
+    "te_route_incident": ["route", "incident"],
+}
+TARGET_ENCODING_FEATURES = list(TARGET_ENCODING_GROUPS.keys())
+TARGET_ENCODING_RANDOM_STATE = 42
+NUMERIC_FEATURES = WEATHER_NUMERIC_FEATURES + TIME_NUMERIC_FEATURES + FLAG_FEATURES + TARGET_ENCODING_FEATURES
 CATEGORICAL_FEATURES = ["route", "incident", "direction", "location"]
 RARE_GROUPED_COLUMNS = ["route", "location"]
 
@@ -129,6 +139,83 @@ def add_derived_features(df: pd.DataFrame, featurize_params: dict, ca_on_holiday
     return df
 
 
+def fit_smoothed_group_stats(df: pd.DataFrame, group_cols: list[str], global_mean_value: float, smoothing: float) -> pd.Series:
+    """Per-group mean of TARGET, smoothed toward `global_mean_value` with
+    weight `smoothing` (larger smoothing -> closer to the global mean for
+    small groups). Indexed by the group value (or a tuple of values for a
+    multi-column grouping)."""
+    grouped = df.groupby(group_cols)[TARGET].agg(["sum", "count"])
+    return (grouped["sum"] + global_mean_value * smoothing) / (grouped["count"] + smoothing)
+
+
+def apply_smoothed_group_stats(df: pd.DataFrame, group_cols: list[str], stats: pd.Series, global_mean_value: float) -> pd.Series:
+    """Map each row's group (or combination, for a multi-column grouping)
+    to its fitted smoothed mean; a group never seen in `stats` gets
+    `global_mean_value`."""
+    if len(group_cols) == 1:
+        keys = df[group_cols[0]]
+    else:
+        keys = pd.Series(list(zip(*(df[c] for c in group_cols))), index=df.index)
+    return keys.map(stats).fillna(global_mean_value).astype(float)
+
+
+def compute_oof_target_encoding(
+    train_df: pd.DataFrame, group_cols: list[str], global_mean_value: float,
+    smoothing: float, n_folds: int, random_state: int,
+) -> np.ndarray:
+    """Out-of-fold smoothed target encoding for the TRAIN split: each
+    row's value is computed from the smoothed group stats fitted on the
+    *other* folds only, so a row never sees its own target. `train_df`
+    must have a default RangeIndex (0..n-1)."""
+    kfold = KFold(n_splits=n_folds, shuffle=True, random_state=random_state)
+    result = np.empty(len(train_df), dtype=float)
+    for fold_train_idx, fold_holdout_idx in kfold.split(train_df):
+        stats = fit_smoothed_group_stats(train_df.iloc[fold_train_idx], group_cols, global_mean_value, smoothing)
+        encoded = apply_smoothed_group_stats(train_df.iloc[fold_holdout_idx], group_cols, stats, global_mean_value)
+        result[fold_holdout_idx] = encoded.to_numpy()
+    return result
+
+
+def target_encoding_table_to_json(stats: pd.Series, group_cols: list[str]) -> dict[str, float]:
+    """A JSON-serialisable {group_key: smoothed_mean} table; multi-column
+    group keys are joined with '||'."""
+    if len(group_cols) == 1:
+        return {str(key): float(value) for key, value in stats.items()}
+    return {"||".join(str(part) for part in key): float(value) for key, value in stats.items()}
+
+
+def add_target_encoding(
+    train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, featurize_params: dict,
+) -> dict[str, dict]:
+    """Fit smoothed target-encoding tables on the full TRAIN split (for
+    val/test and for storing in feature_spec.json), add out-of-fold
+    encodings to `train` itself, and add the full-train encodings to
+    `val`/`test` (unseen groups -> the train global mean). Mutates
+    train/val/test in place and returns the spec payload for
+    feature_spec.json."""
+    smoothing = featurize_params["te_smoothing"]
+    n_folds = featurize_params["te_folds"]
+    global_mean_value = float(train[TARGET].mean())
+
+    spec: dict[str, dict] = {}
+    for name, group_cols in TARGET_ENCODING_GROUPS.items():
+        stats = fit_smoothed_group_stats(train, group_cols, global_mean_value, smoothing)
+
+        train[name] = compute_oof_target_encoding(
+            train, group_cols, global_mean_value, smoothing, n_folds, TARGET_ENCODING_RANDOM_STATE
+        )
+        val[name] = apply_smoothed_group_stats(val, group_cols, stats, global_mean_value)
+        test[name] = apply_smoothed_group_stats(test, group_cols, stats, global_mean_value)
+
+        spec[name] = {
+            "group_cols": group_cols,
+            "global_mean": global_mean_value,
+            "smoothing": smoothing,
+            "table": target_encoding_table_to_json(stats, group_cols),
+        }
+    return spec
+
+
 def select_output_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Keep only feature columns + target + timestamp (for reference)."""
     return df[NUMERIC_FEATURES + CATEGORICAL_FEATURES + [TARGET, "timestamp"]].reset_index(drop=True)
@@ -160,9 +247,11 @@ def main() -> int:
     test = add_derived_features(fill_missing_categoricals(test_raw), featurize_params, ca_on_holidays)
 
     rare_value_sets = fit_rare_value_sets(train, featurize_params)
-    train = apply_rare_value_sets(train, rare_value_sets)
-    val = apply_rare_value_sets(val, rare_value_sets)
-    test = apply_rare_value_sets(test, rare_value_sets)
+    train = apply_rare_value_sets(train, rare_value_sets).reset_index(drop=True)
+    val = apply_rare_value_sets(val, rare_value_sets).reset_index(drop=True)
+    test = apply_rare_value_sets(test, rare_value_sets).reset_index(drop=True)
+
+    target_encoding_spec = add_target_encoding(train, val, test, featurize_params)
 
     train_out = select_output_columns(train)
     val_out = select_output_columns(val)
@@ -181,6 +270,7 @@ def main() -> int:
         "target": TARGET,
         "kept_routes": sorted(rare_value_sets["route"]),
         "kept_locations": sorted(rare_value_sets["location"]),
+        "target_encoding": target_encoding_spec,
         "params": featurize_params,
     }
     FEATURE_SPEC_PATH.write_text(json.dumps(feature_spec, indent=2))

@@ -67,9 +67,22 @@ def git_branch() -> str:
     return _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 
 
+GIT_DIRTY_IGNORED_PREFIXES = ("dvc.lock", "reports/", "models/", "data/", "mlruns/")
+
+
 def git_is_dirty() -> bool:
-    """True if the working tree has uncommitted changes."""
-    return bool(_run(["git", "status", "--porcelain"]))
+    """True if the working tree has uncommitted changes, ignoring changes
+    under dvc.lock, reports/, models/, data/ and mlruns/ — those are
+    pipeline outputs that routinely change during `dvc repro` and would
+    otherwise mark every run as dirty."""
+    output = _run(["git", "status", "--porcelain"])
+    for line in output.splitlines():
+        path = line[3:].strip().strip('"')
+        if " -> " in path:  # renames: "old -> new"
+            path = path.split(" -> ")[-1].strip().strip('"')
+        if not path.startswith(GIT_DIRTY_IGNORED_PREFIXES):
+            return True
+    return False
 
 
 def featurize_outputs_md5(dvc_lock_path: Path = DVC_LOCK_PATH) -> str:

@@ -11,9 +11,13 @@ from src.features.build_features import (
     NUMERIC_FEATURES,
     TARGET,
     add_derived_features,
+    add_target_encoding,
     apply_rare_value_sets,
+    apply_smoothed_group_stats,
+    compute_oof_target_encoding,
     fill_missing_categoricals,
     fit_rare_value_sets,
+    fit_smoothed_group_stats,
     select_output_columns,
     split_by_time,
 )
@@ -29,6 +33,8 @@ FEATURIZE_PARAMS = {
     "heavy_precip_mm": 2.5,
     "covid_start": "2020-03-15",
     "covid_end": "2021-12-31",
+    "te_smoothing": 20,
+    "te_folds": 5,
 }
 
 
@@ -61,6 +67,8 @@ def test_leakage_and_excluded_columns_never_appear_in_features():
     df = add_derived_features(df, FEATURIZE_PARAMS, holidays.Canada(subdiv="ON"))
     kept = fit_rare_value_sets(df, FEATURIZE_PARAMS)
     df = apply_rare_value_sets(df, kept)
+    small_te_params = dict(FEATURIZE_PARAMS, te_folds=2)
+    add_target_encoding(df, df.copy(), df.copy(), small_te_params)
     out = select_output_columns(df)
 
     assert "min_gap" not in out.columns
@@ -136,3 +144,61 @@ def test_is_holiday_flags_canada_day_and_not_a_normal_weekday():
 
     assert out["is_holiday"].iloc[0] == 1
     assert out["is_holiday"].iloc[1] == 0
+
+
+# --------------------------------------------------------------------------
+# target encoding
+# --------------------------------------------------------------------------
+def test_oof_target_encoding_never_uses_a_rows_own_target():
+    # 2 rows, same route, 2 folds -> each row's holdout fold has exactly
+    # the OTHER row in its training fold, so with smoothing=0 its encoded
+    # value must equal the other row's target exactly, not its own.
+    train = pd.DataFrame({"route": ["1", "1"], "min_delay": [10.0, 100.0]})
+    global_mean_value = float(train["min_delay"].mean())
+
+    oof = compute_oof_target_encoding(
+        train, ["route"], global_mean_value, smoothing=0, n_folds=2, random_state=42
+    )
+    assert oof[0] == 100.0  # row 0's own target (10.0) is never used
+    assert oof[1] == 10.0  # row 1's own target (100.0) is never used
+
+    # the in-sample (non-OOF) group mean, which DOES use each row's own
+    # target, differs from the OOF values above.
+    in_sample_stats = fit_smoothed_group_stats(train, ["route"], global_mean_value, smoothing=0)
+    in_sample = apply_smoothed_group_stats(train, ["route"], in_sample_stats, global_mean_value).to_numpy()
+    assert not (oof == in_sample).all()
+
+
+def test_unseen_group_in_val_gets_global_train_mean():
+    train = pd.DataFrame({"location": ["A", "A", "B"], "min_delay": [10.0, 20.0, 30.0]})
+    global_mean_value = float(train["min_delay"].mean())
+    stats = fit_smoothed_group_stats(train, ["location"], global_mean_value, smoothing=20)
+
+    val = pd.DataFrame({"location": ["NEVER_SEEN"]})
+    encoded = apply_smoothed_group_stats(val, ["location"], stats, global_mean_value)
+
+    assert encoded.iloc[0] == global_mean_value
+
+
+def test_target_encoding_columns_have_no_nan_in_any_split():
+    train = pd.DataFrame(
+        [
+            make_merged_row("2022-01-01", route="1", location="A"),
+            make_merged_row("2022-01-02", route="1", location="A"),
+            make_merged_row("2022-01-03", route="2", location="B"),
+            make_merged_row("2022-01-04", route="2", location="B"),
+        ]
+    )
+    train["min_delay"] = [10.0, 100.0, 5.0, 50.0]
+    val = pd.DataFrame([make_merged_row("2023-01-01", route="1", location="NEVER_SEEN")])
+    val["min_delay"] = [20.0]
+    test = pd.DataFrame([make_merged_row("2024-01-01", route="2", location="B")])
+    test["min_delay"] = [30.0]
+
+    small_te_params = dict(FEATURIZE_PARAMS, te_folds=2)
+    spec = add_target_encoding(train, val, test, small_te_params)
+    te_cols = list(spec.keys())
+
+    assert not train[te_cols].isna().any().any()
+    assert not val[te_cols].isna().any().any()
+    assert not test[te_cols].isna().any().any()

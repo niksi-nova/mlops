@@ -7,7 +7,7 @@ no MLflow run is started.
 import numpy as np
 import pandas as pd
 
-from src.models.train import NaiveBaselineRegressor, clip_and_backtransform
+from src.models.train import GlobalMedianRegressor, NaiveBaselineRegressor, clip_and_backtransform
 
 
 def make_row(route: str, incident: str, min_delay: float) -> dict:
@@ -71,3 +71,16 @@ def test_log1p_expm1_round_trip_recovers_original_values():
     transformed = np.log1p(original)
     recovered = clip_and_backtransform(transformed, log_target=True)
     np.testing.assert_allclose(recovered, original, rtol=1e-10)
+
+
+# --------------------------------------------------------------------------
+# GlobalMedianRegressor
+# --------------------------------------------------------------------------
+def test_global_median_predicts_constant_train_median():
+    train = pd.DataFrame({"min_delay": [5.0, 10.0, 10.0, 15.0, 100.0]})
+    model = GlobalMedianRegressor().fit(train, train["min_delay"])
+
+    other_rows = pd.DataFrame({"min_delay": [0.0, 0.0, 0.0]})
+    pred = model.predict(other_rows)
+
+    assert (pred == 10.0).all()  # median of [5, 10, 10, 15, 100]

@@ -106,6 +106,21 @@ class NaiveBaselineRegressor(BaseEstimator, RegressorMixin):
 
 
 # --------------------------------------------------------------------------
+# global_median
+# --------------------------------------------------------------------------
+class GlobalMedianRegressor(BaseEstimator, RegressorMixin):
+    """Predicts the train median min_delay for every row, regardless of
+    features — the simplest possible baseline."""
+
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> "GlobalMedianRegressor":
+        self.median_ = float(np.median(np.asarray(y)))
+        return self
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        return np.full(len(X), self.median_)
+
+
+# --------------------------------------------------------------------------
 # metrics / plotting helpers
 # --------------------------------------------------------------------------
 def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray, prefix: str) -> dict[str, float]:
@@ -141,6 +156,16 @@ def clip_and_backtransform(raw_pred: np.ndarray, log_target: bool) -> np.ndarray
 # --------------------------------------------------------------------------
 def train_naive_baseline(train_df: pd.DataFrame, val_df: pd.DataFrame) -> tuple[Any, np.ndarray, np.ndarray, float]:
     model = NaiveBaselineRegressor()
+    start = time.perf_counter()
+    model.fit(train_df, train_df[TARGET])
+    elapsed = time.perf_counter() - start
+    train_pred = model.predict(train_df)
+    val_pred = model.predict(val_df)
+    return model, train_pred, val_pred, elapsed
+
+
+def train_global_median(train_df: pd.DataFrame, val_df: pd.DataFrame) -> tuple[Any, np.ndarray, np.ndarray, float]:
+    model = GlobalMedianRegressor()
     start = time.perf_counter()
     model.fit(train_df, train_df[TARGET])
     elapsed = time.perf_counter() - start
@@ -283,6 +308,20 @@ def main() -> int:
         fitted_models["naive_baseline"] = model
         print(f"naive_baseline: val_mae={metrics['val_mae']:.3f}")
 
+    # --- global_median --------------------------------------------------
+    with mlflow.start_run(run_name="global_median"):
+        mlflow.set_tags(tags)
+        model, train_pred, val_pred, elapsed = train_global_median(train_df, val_df)
+        metrics = regression_metrics(val_df[TARGET], val_pred, "val")
+        metrics["train_mae"] = float(mean_absolute_error(train_df[TARGET], train_pred))
+        metrics["training_time_seconds"] = elapsed
+        mlflow.log_metrics(metrics)
+        mlflow.log_artifact(str(FEATURE_SPEC_PATH))
+        mlflow.sklearn.log_model(model, name="model", serialization_format="cloudpickle")
+        results["global_median"] = metrics
+        fitted_models["global_median"] = model
+        print(f"global_median: val_mae={metrics['val_mae']:.3f}")
+
     # --- ridge -----------------------------------------------------------
     with mlflow.start_run(run_name="ridge"):
         mlflow.set_tags(tags)
@@ -349,6 +388,30 @@ def main() -> int:
         fitted_models["lightgbm"] = model
         print(f"lightgbm: val_mae={metrics['val_mae']:.3f}")
 
+    # --- lightgbm_l1 (L1/MAE objective, trained on the raw target) -----
+    with mlflow.start_run(run_name="lightgbm_l1"):
+        mlflow.set_tags(tags)
+        mlflow.log_params(train_params["lightgbm_l1"])
+        mlflow.log_param("log_target", False)
+        model, train_pred, val_pred, elapsed, feat_names, importances = train_lightgbm(
+            train_df, val_df, numeric_features, categorical_features,
+            train_params["lightgbm_l1"], False, random_state,
+        )
+        metrics = regression_metrics(val_df[TARGET], val_pred, "val")
+        metrics["train_mae"] = float(mean_absolute_error(train_df[TARGET], train_pred))
+        metrics["training_time_seconds"] = elapsed
+        mlflow.log_metrics(metrics)
+        mlflow.log_artifact(str(FEATURE_SPEC_PATH))
+        mlflow.lightgbm.log_model(model, name="model")
+
+        fi_path = MODELS_DIR / "lightgbm_l1_feature_importance.png"
+        plot_feature_importance(feat_names, importances, "LightGBM (L1) — top 20 feature importances", fi_path)
+        mlflow.log_artifact(str(fi_path))
+
+        results["lightgbm_l1"] = metrics
+        fitted_models["lightgbm_l1"] = model
+        print(f"lightgbm_l1: val_mae={metrics['val_mae']:.3f}")
+
     # --- pick the best model, write reports -----------------------------
     best_name = min(results, key=lambda name: results[name]["val_mae"])
     best_model = fitted_models[best_name]
@@ -356,13 +419,16 @@ def main() -> int:
     print(f"Best model: {best_name} -> {BEST_MODEL_PATH.relative_to(PROJECT_ROOT)}")
 
     naive_mae = results["naive_baseline"]["val_mae"]
+    global_median_mae = results["global_median"]["val_mae"]
     best_mae = results[best_name]["val_mae"]
-    mae_improvement_pct = float((naive_mae - best_mae) / naive_mae * 100)
+    mae_improvement_pct_over_naive = float((naive_mae - best_mae) / naive_mae * 100)
+    mae_improvement_pct_over_global_median = float((global_median_mae - best_mae) / global_median_mae * 100)
 
     report = {
         "models": results,
         "best_model": best_name,
-        "mae_improvement_pct_over_naive": mae_improvement_pct,
+        "mae_improvement_pct_over_naive": mae_improvement_pct_over_naive,
+        "mae_improvement_pct_over_global_median": mae_improvement_pct_over_global_median,
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(json.dumps(report, indent=2))
