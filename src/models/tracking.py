@@ -46,13 +46,17 @@ def configure_tracking() -> str:
 
 
 def _run(cmd: list[str]) -> str:
-    """Run a git command from the project root and return stripped stdout,
-    or "" if it fails (e.g. not a git repo)."""
+    """Run a git command from the project root and return its stdout with
+    only the trailing newline removed, or "" if it fails (e.g. not a git
+    repo). Uses rstrip("\n"), NOT strip(): `git status --porcelain` lines
+    legitimately start with a space (e.g. " M path"), and a plain .strip()
+    would eat that leading space off the first line, corrupting the
+    fixed-width status-code/path parsing in _porcelain_path()."""
     try:
         result = subprocess.run(
             cmd, cwd=PROJECT_ROOT, capture_output=True, text=True, check=True
         )
-        return result.stdout.strip()
+        return result.stdout.rstrip("\n")
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
@@ -67,22 +71,36 @@ def git_branch() -> str:
     return _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 
 
-GIT_DIRTY_IGNORED_PREFIXES = ("dvc.lock", "reports/", "models/", "data/", "mlruns/")
+GIT_DIRTY_IGNORED_PREFIXES = ("dvc.lock", "reports/", "models/", "data/", "mlruns/", ".dvc/")
+
+
+def _porcelain_path(line: str) -> str:
+    """The path from one `git status --porcelain` line. Status codes
+    always occupy the first 2 characters, so the path starts at index 3
+    (no stripping of the line itself — that's git's fixed-width format,
+    not incidental whitespace). A rename/copy line reads "old -> new";
+    we only care about the new path."""
+    path = line[3:]
+    if " -> " in path:
+        path = path.split(" -> ", 1)[1]
+    return path
+
+
+def dirty_files() -> list[str]:
+    """Paths from `git status --porcelain` that are NOT under an ignored
+    prefix (dvc.lock, reports/, models/, data/, mlruns/, .dvc/). Empty
+    means the tree is clean (for tagging purposes)."""
+    output = _run(["git", "status", "--porcelain"])
+    paths = [_porcelain_path(line) for line in output.splitlines()]
+    return [path for path in paths if not path.startswith(GIT_DIRTY_IGNORED_PREFIXES)]
 
 
 def git_is_dirty() -> bool:
-    """True if the working tree has uncommitted changes, ignoring changes
-    under dvc.lock, reports/, models/, data/ and mlruns/ — those are
-    pipeline outputs that routinely change during `dvc repro` and would
-    otherwise mark every run as dirty."""
-    output = _run(["git", "status", "--porcelain"])
-    for line in output.splitlines():
-        path = line[3:].strip().strip('"')
-        if " -> " in path:  # renames: "old -> new"
-            path = path.split(" -> ")[-1].strip().strip('"')
-        if not path.startswith(GIT_DIRTY_IGNORED_PREFIXES):
-            return True
-    return False
+    """True if the working tree has uncommitted changes outside of
+    dvc.lock, reports/, models/, data/, mlruns/ and .dvc/ — those are
+    pipeline-internal paths that routinely change during `dvc repro` and
+    would otherwise mark every run as dirty."""
+    return bool(dirty_files())
 
 
 def featurize_outputs_md5(dvc_lock_path: Path = DVC_LOCK_PATH) -> str:
@@ -104,11 +122,14 @@ def featurize_outputs_md5(dvc_lock_path: Path = DVC_LOCK_PATH) -> str:
 
 def run_tags() -> dict[str, str]:
     """Standard tags to attach to every MLflow run: git commit, branch,
-    dirty flag, the featurize-stage data hash, and the dataset version."""
+    dirty flag (+ the non-ignored dirty paths, so it's clear WHY a run is
+    dirty), the featurize-stage data hash, and the dataset version."""
+    dirty = dirty_files()
     return {
         "git_commit": git_commit_hash(),
         "git_branch": git_branch(),
-        "git_dirty": str(git_is_dirty()),
+        "git_dirty": str(bool(dirty)),
+        "git_dirty_files": ",".join(dirty),
         "data_processed_md5": featurize_outputs_md5(),
         "dataset_version": DATASET_VERSION,
     }
