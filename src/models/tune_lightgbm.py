@@ -62,6 +62,7 @@ def main() -> int:
     configure_tracking()
     mlflow.set_experiment(train_params["experiment_name"])
     tags = run_tags()
+    tags["mlflow.source.name"] = "src/models/tune_lightgbm.py"
 
     rows = []
     with mlflow.start_run(run_name="lightgbm-sweep") as parent_run:

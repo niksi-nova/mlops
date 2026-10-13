@@ -368,6 +368,7 @@ def main() -> int:
     mlflow.set_experiment(train_params["experiment_name"])
     tags = dict(run_tags())
     tags["best_model_run_id"] = model_index[best_name]["run_id"]
+    tags["mlflow.source.name"] = "src/models/evaluate.py"
 
     with mlflow.start_run(run_name="final-evaluation-test-2024"):
         mlflow.set_tags(tags)

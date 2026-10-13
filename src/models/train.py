@@ -299,6 +299,9 @@ def main() -> int:
     configure_tracking()
     mlflow.set_experiment(train_params["experiment_name"])
     tags = run_tags()
+    # dvc.yaml runs this via `python -c "..."`, which would otherwise show
+    # up as source "-c" in the MLflow UI; point it at the real script.
+    tags["mlflow.source.name"] = "src/models/train.py"
 
     results: dict[str, dict[str, float]] = {}
     fitted_models: dict[str, Any] = {}

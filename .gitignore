@@ -48,3 +48,4 @@ mlartifacts/
 
 # Partial downloads (src/data/ingest.py writes here before renaming)
 *.part
+/models
