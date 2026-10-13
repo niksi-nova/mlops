@@ -62,7 +62,7 @@ stages:
           cache: false
 
   train:
-    cmd: uv run python -m src.models.train
+    cmd: uv run python -c "from src.models.train import main; main()"
     deps:
       - data/processed/train.parquet
       - data/processed/val.parquet
@@ -72,7 +72,20 @@ stages:
     params:
       - train
     outs:
-      - models/best_model.joblib
+      - models/
     metrics:
       - reports/train_metrics.json:
           cache: false
+
+  evaluate:
+    cmd: uv run python -c "from src.models.evaluate import main; main()"
+    deps:
+      - data/processed/test.parquet
+      - data/processed/feature_spec.json
+      - models/
+      - src/models/evaluate.py
+    metrics:
+      - reports/test_metrics.json:
+          cache: false
+    plots:
+      - reports/figures/eval/

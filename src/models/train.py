@@ -12,7 +12,9 @@ lightgbm. All are evaluated on the validation split only (test.parquet is
 never loaded here).
 
 Writes:
+  - models/<model_name>.joblib      (every trained model)
   - models/best_model.joblib        (the run with the lowest val_mae)
+  - models/model_index.json         (name -> file, val_mae, MLflow run_id)
   - reports/train_metrics.json      (every model's val metrics + the winner)
 
 Usage:
@@ -228,24 +230,33 @@ def train_random_forest(
     return model, train_pred, val_pred, elapsed, feature_names, importances
 
 
+def prep_lightgbm_features(
+    df: pd.DataFrame, feature_columns: list[str], categorical_features: list[str],
+    train_categories: dict[str, pd.Index] | None = None,
+) -> pd.DataFrame:
+    """Select LightGBM's feature columns and cast categoricals to pandas
+    'category' dtype (LightGBM's native categorical handling). Pass the
+    TRAIN split's fitted `train_categories` (from this same function's
+    return value on train) when preparing val/test, so category codes line
+    up with what the model was trained on."""
+    X = df[feature_columns].copy()
+    for col in categorical_features:
+        if train_categories is None:
+            X[col] = X[col].astype("category")
+        else:
+            X[col] = pd.Categorical(X[col], categories=train_categories[col])
+    return X
+
+
 def train_lightgbm(
     train_df: pd.DataFrame, val_df: pd.DataFrame, numeric_features: list[str],
     categorical_features: list[str], lgbm_params: dict, log_target: bool, random_state: int,
 ) -> tuple[lgb.LGBMRegressor, np.ndarray, np.ndarray, float, list[str], np.ndarray]:
     feature_columns = categorical_features + numeric_features
 
-    def prep(df: pd.DataFrame, train_categories: dict[str, pd.Index] | None = None) -> pd.DataFrame:
-        X = df[feature_columns].copy()
-        for col in categorical_features:
-            if train_categories is None:
-                X[col] = X[col].astype("category")
-            else:
-                X[col] = pd.Categorical(X[col], categories=train_categories[col])
-        return X
-
-    X_train = prep(train_df)
+    X_train = prep_lightgbm_features(train_df, feature_columns, categorical_features)
     train_categories = {col: X_train[col].cat.categories for col in categorical_features}
-    X_val = prep(val_df, train_categories)
+    X_val = prep_lightgbm_features(val_df, feature_columns, categorical_features, train_categories)
 
     y_train = np.log1p(train_df[TARGET]) if log_target else train_df[TARGET]
     y_val = np.log1p(val_df[TARGET]) if log_target else val_df[TARGET]
@@ -291,11 +302,12 @@ def main() -> int:
 
     results: dict[str, dict[str, float]] = {}
     fitted_models: dict[str, Any] = {}
+    run_ids: dict[str, str] = {}
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- naive_baseline -----------------------------------------------
-    with mlflow.start_run(run_name="naive_baseline"):
+    with mlflow.start_run(run_name="naive_baseline") as run:
         mlflow.set_tags(tags)
         model, train_pred, val_pred, elapsed = train_naive_baseline(train_df, val_df)
         metrics = regression_metrics(val_df[TARGET], val_pred, "val")
@@ -306,10 +318,11 @@ def main() -> int:
         mlflow.sklearn.log_model(model, name="model", serialization_format="cloudpickle")
         results["naive_baseline"] = metrics
         fitted_models["naive_baseline"] = model
+        run_ids["naive_baseline"] = run.info.run_id
         print(f"naive_baseline: val_mae={metrics['val_mae']:.3f}")
 
     # --- global_median --------------------------------------------------
-    with mlflow.start_run(run_name="global_median"):
+    with mlflow.start_run(run_name="global_median") as run:
         mlflow.set_tags(tags)
         model, train_pred, val_pred, elapsed = train_global_median(train_df, val_df)
         metrics = regression_metrics(val_df[TARGET], val_pred, "val")
@@ -320,10 +333,11 @@ def main() -> int:
         mlflow.sklearn.log_model(model, name="model", serialization_format="cloudpickle")
         results["global_median"] = metrics
         fitted_models["global_median"] = model
+        run_ids["global_median"] = run.info.run_id
         print(f"global_median: val_mae={metrics['val_mae']:.3f}")
 
     # --- ridge -----------------------------------------------------------
-    with mlflow.start_run(run_name="ridge"):
+    with mlflow.start_run(run_name="ridge") as run:
         mlflow.set_tags(tags)
         mlflow.log_params(train_params["ridge"])
         mlflow.log_param("log_target", log_target)
@@ -338,10 +352,11 @@ def main() -> int:
         mlflow.sklearn.log_model(model, name="model", serialization_format="cloudpickle")
         results["ridge"] = metrics
         fitted_models["ridge"] = model
+        run_ids["ridge"] = run.info.run_id
         print(f"ridge: val_mae={metrics['val_mae']:.3f}")
 
     # --- random_forest -----------------------------------------------------
-    with mlflow.start_run(run_name="random_forest"):
+    with mlflow.start_run(run_name="random_forest") as run:
         mlflow.set_tags(tags)
         mlflow.log_params(train_params["random_forest"])
         mlflow.log_param("log_target", log_target)
@@ -362,10 +377,11 @@ def main() -> int:
 
         results["random_forest"] = metrics
         fitted_models["random_forest"] = model
+        run_ids["random_forest"] = run.info.run_id
         print(f"random_forest: val_mae={metrics['val_mae']:.3f}")
 
     # --- lightgbm ------------------------------------------------------
-    with mlflow.start_run(run_name="lightgbm"):
+    with mlflow.start_run(run_name="lightgbm") as run:
         mlflow.set_tags(tags)
         mlflow.log_params(train_params["lightgbm"])
         mlflow.log_param("log_target", log_target)
@@ -386,10 +402,11 @@ def main() -> int:
 
         results["lightgbm"] = metrics
         fitted_models["lightgbm"] = model
+        run_ids["lightgbm"] = run.info.run_id
         print(f"lightgbm: val_mae={metrics['val_mae']:.3f}")
 
     # --- lightgbm_l1 (L1/MAE objective, trained on the raw target) -----
-    with mlflow.start_run(run_name="lightgbm_l1"):
+    with mlflow.start_run(run_name="lightgbm_l1") as run:
         mlflow.set_tags(tags)
         mlflow.log_params(train_params["lightgbm_l1"])
         mlflow.log_param("log_target", False)
@@ -410,9 +427,21 @@ def main() -> int:
 
         results["lightgbm_l1"] = metrics
         fitted_models["lightgbm_l1"] = model
+        run_ids["lightgbm_l1"] = run.info.run_id
         print(f"lightgbm_l1: val_mae={metrics['val_mae']:.3f}")
 
-    # --- pick the best model, write reports -----------------------------
+    # --- save every model, pick the best, write reports -----------------
+    model_index = {}
+    for name, model in fitted_models.items():
+        model_path = MODELS_DIR / f"{name}.joblib"
+        joblib.dump(model, model_path)
+        model_index[name] = {
+            "file": model_path.name,
+            "val_mae": results[name]["val_mae"],
+            "run_id": run_ids[name],
+        }
+    (MODELS_DIR / "model_index.json").write_text(json.dumps(model_index, indent=2))
+
     best_name = min(results, key=lambda name: results[name]["val_mae"])
     best_model = fitted_models[best_name]
     joblib.dump(best_model, BEST_MODEL_PATH)
