@@ -28,3 +28,22 @@ featurize:
   heavy_precip_mm: 2.5
   covid_start: "2020-03-15"
   covid_end: "2021-12-31"
+
+train:
+  experiment_name: ttc-delay-baselines
+  log_target: true
+  random_state: 42
+  ridge:
+    alpha: 1.0
+  random_forest:
+    n_estimators: 200
+    max_depth: 20
+    min_samples_leaf: 5
+  lightgbm:
+    n_estimators: 2000
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 50
+    subsample: 0.8
+    colsample_bytree: 0.8
+    early_stopping_rounds: 100

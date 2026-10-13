@@ -146,3 +146,55 @@ stages:
       hash: md5
       md5: 78186ca74c60841c32c40a3f12ae98e5
       size: 787
+  train:
+    cmd: uv run python -m src.models.train
+    deps:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: b02d622b37397fa038e36881f8d13354
+      size: 18529
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 509245528094c76e0e6ad2e77582fde2
+      size: 3474446
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: fbef5a27718791662ae6ef3902d22a8a
+      size: 797290
+    - path: src/models/tracking.py
+      hash: md5
+      md5: ffe82b86c4c112fbd87eca05b000622f
+      size: 3428
+    - path: src/models/train.py
+      hash: md5
+      md5: 221dd5f9aaa09770b14c72653a163e6e
+      size: 15409
+    params:
+      params.yaml:
+        train:
+          experiment_name: ttc-delay-baselines
+          log_target: true
+          random_state: 42
+          ridge:
+            alpha: 1.0
+          random_forest:
+            n_estimators: 200
+            max_depth: 20
+            min_samples_leaf: 5
+          lightgbm:
+            n_estimators: 2000
+            learning_rate: 0.05
+            num_leaves: 63
+            min_child_samples: 50
+            subsample: 0.8
+            colsample_bytree: 0.8
+            early_stopping_rounds: 100
+    outs:
+    - path: models/best_model.joblib
+      hash: md5
+      md5: 549221a252faf899fe93b06891745062
+      size: 2197921
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: fdeb17bc9ccc44e713e1519058b3f6d1
+      size: 1176
