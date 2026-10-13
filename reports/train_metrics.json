@@ -1,0 +1,38 @@
+{
+  "models": {
+    "naive_baseline": {
+      "val_mae": 8.113776616719692,
+      "val_rmse": 19.702117867198105,
+      "val_r2": 0.31803572885463915,
+      "val_median_ae": 3.16267942583732,
+      "train_mae": 7.215674544111788,
+      "training_time_seconds": 0.045791374999680556
+    },
+    "ridge": {
+      "val_mae": 8.161724799117017,
+      "val_rmse": 21.429388191734667,
+      "val_r2": 0.19321959687800516,
+      "val_median_ae": 3.429350669959854,
+      "train_mae": 7.277352374229453,
+      "training_time_seconds": 2.7521902920016146
+    },
+    "random_forest": {
+      "val_mae": 8.134670575750418,
+      "val_rmse": 21.36261394624155,
+      "val_r2": 0.19823963935987077,
+      "val_median_ae": 3.3403299319028434,
+      "train_mae": 5.834268730476182,
+      "training_time_seconds": 32.25015904199972
+    },
+    "lightgbm": {
+      "val_mae": 7.847488487892968,
+      "val_rmse": 21.122780259845452,
+      "val_r2": 0.21614098308030005,
+      "val_median_ae": 3.1063756701352236,
+      "train_mae": 6.388275439900206,
+      "training_time_seconds": 6.542077457997948
+    }
+  },
+  "best_model": "lightgbm",
+  "mae_improvement_pct_over_naive": 3.2819258084822787
+}
