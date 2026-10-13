@@ -1,12 +1,6 @@
-import os
-import sys
-
 import numpy as np
 import pandas as pd
 import pytest
-
-# Ensure project root directory is in sys.path for module resolution
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.features.time_features import add_time_features
 

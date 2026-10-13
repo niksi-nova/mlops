@@ -3,16 +3,10 @@
 All tests use small hand-made DataFrames; no real data files are read.
 """
 
-import os
-import sys
-
 import pandas as pd
 import pytest
 
-# Ensure project root directory is in sys.path for module resolution
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from src.data.clean import (  # noqa: E402
+from src.data.clean import (
     FINAL_COLUMNS,
     apply_cleaning_rules,
     build_timestamp,
