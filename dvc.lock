@@ -1,0 +1,101 @@
+schema: '2.0'
+stages:
+  clean:
+    cmd: uv run python src/data/clean.py
+    deps:
+    - path: data/raw/historical
+      hash: md5
+      md5: 75a5382e58babd4756410e4c3d1bb919.dir
+      size: 24073122
+      nfiles: 7
+    - path: src/data/clean.py
+      hash: md5
+      md5: 76b449172a3c8d11d303c407d9589c0d
+      size: 10961
+    params:
+      params.yaml:
+        clean:
+          min_delay: 0
+          max_delay: 300
+          drop_zero_delay: false
+    outs:
+    - path: data/interim/historical_clean.parquet
+      hash: md5
+      md5: f02fe426c1a227534b446aaa9bf9dbf1
+      size: 7796698
+    - path: reports/cleaning_report.json
+      hash: md5
+      md5: d291e89d17dd0e70442d6f4c3fd8ea00
+      size: 555
+  validate:
+    cmd: uv run python src/data/validate.py
+    deps:
+    - path: data/interim/historical_clean.parquet
+      hash: md5
+      md5: f02fe426c1a227534b446aaa9bf9dbf1
+      size: 7796698
+    - path: src/data/validate.py
+      hash: md5
+      md5: 6fb92678cc6d9135f220613207237aee
+      size: 3543
+    outs:
+    - path: reports/validation_report.json
+      hash: md5
+      md5: 4745056fe2f395f55b2ff9b276b78c76
+      size: 271
+  fetch_weather:
+    cmd: uv run python src/data/fetch_weather.py
+    deps:
+    - path: data/interim/historical_clean.parquet
+      hash: md5
+      md5: f02fe426c1a227534b446aaa9bf9dbf1
+      size: 7796698
+    - path: src/data/fetch_weather.py
+      hash: md5
+      md5: a30744ea1042ce0de31e793ce750b724
+      size: 3596
+    params:
+      params.yaml:
+        weather:
+          latitude: 43.65
+          longitude: -79.38
+          timezone: America/Toronto
+          hourly_variables:
+          - temperature_2m
+          - precipitation
+          - rain
+          - snowfall
+          - wind_speed_10m
+    outs:
+    - path: data/external/weather_hourly.parquet
+      hash: md5
+      md5: 12eb3e1feb6fe5c20291d2722b476940
+      size: 727447
+  merge:
+    cmd: uv run python src/data/merge.py
+    deps:
+    - path: data/external/weather_hourly.parquet
+      hash: md5
+      md5: 12eb3e1feb6fe5c20291d2722b476940
+      size: 727447
+    - path: data/interim/historical_clean.parquet
+      hash: md5
+      md5: f02fe426c1a227534b446aaa9bf9dbf1
+      size: 7796698
+    - path: reports/validation_report.json
+      hash: md5
+      md5: 4745056fe2f395f55b2ff9b276b78c76
+      size: 271
+    - path: src/data/merge.py
+      hash: md5
+      md5: 371b7476c3288983539e8a0c232d9b17
+      size: 2152
+    outs:
+    - path: data/interim/merged.parquet
+      hash: md5
+      md5: b1e188de917398908375583671e54c38
+      size: 8312771
+    - path: reports/merge_report.json
+      hash: md5
+      md5: b93afcdfc3fa7af68efe7f095000d042
+      size: 88

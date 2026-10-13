@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "row_count": 382131,
+  "checks_run": [
+    "required columns present",
+    "min_delay in [0, 300]",
+    "timestamp not null and within 2018-01-01 to 2024-12-31",
+    "direction in ['B', 'E', 'N', 'S', 'UNKNOWN', 'W']",
+    "route not null"
+  ]
+}

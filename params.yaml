@@ -7,3 +7,14 @@ clean:
   min_delay: 0          # drop negative delays
   max_delay: 300        # drop delays above 5 hours as recording errors
   drop_zero_delay: false
+
+weather:
+  latitude: 43.65
+  longitude: -79.38
+  timezone: America/Toronto
+  hourly_variables:
+    - temperature_2m
+    - precipitation
+    - rain
+    - snowfall
+    - wind_speed_10m
