@@ -169,8 +169,8 @@ stages:
       size: 5054
     - path: src/models/train.py
       hash: md5
-      md5: 75baf16655e4e8e2b1e69f15fa4d8fe9
-      size: 20112
+      md5: 3353ac01b842e0023876b08d1407bfe5
+      size: 20313
     params:
       params.yaml:
         train:
@@ -203,13 +203,13 @@ stages:
     outs:
     - path: models/
       hash: md5
-      md5: 59ee7d30f5fbe97d858c31f838cebddb.dir
-      size: 303725382
+      md5: c072f490cbfc21b2cddf31d3dd1a635f.dir
+      size: 303725383
       nfiles: 11
     - path: reports/train_metrics.json
       hash: md5
-      md5: 9242a23d9f2843288770269c9686b9ee
-      size: 1767
+      md5: 6e45d10b31d45410041c2cd5d0bce346
+      size: 1769
   evaluate:
     cmd: uv run python -c "from src.models.evaluate import main; main()"
     deps:
@@ -223,13 +223,13 @@ stages:
       size: 1087718
     - path: models/
       hash: md5
-      md5: 59ee7d30f5fbe97d858c31f838cebddb.dir
-      size: 303725382
+      md5: c072f490cbfc21b2cddf31d3dd1a635f.dir
+      size: 303725383
       nfiles: 11
     - path: src/models/evaluate.py
       hash: md5
-      md5: c8962943a899472567b4fb0596c89b10
-      size: 16700
+      md5: 3b7282e3446f7fca6be765b288b6cf99
+      size: 16758
     outs:
     - path: reports/figures/eval/
       hash: md5
@@ -238,5 +238,5 @@ stages:
       nfiles: 7
     - path: reports/test_metrics.json
       hash: md5
-      md5: d2162e23ed8317e5d507195dba19f26e
+      md5: e6068350f6d9d6bee80a9c4382296a8a
       size: 6637
