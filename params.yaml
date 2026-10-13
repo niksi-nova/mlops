@@ -18,3 +18,13 @@ weather:
     - rain
     - snowfall
     - wind_speed_10m
+
+featurize:
+  train_end: "2022-12-31"
+  val_year: 2023
+  test_year: 2024
+  rare_location_min_count: 50
+  rare_route_min_count: 30
+  heavy_precip_mm: 2.5
+  covid_start: "2020-03-15"
+  covid_end: "2021-12-31"

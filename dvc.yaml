@@ -43,3 +43,20 @@ stages:
     metrics:
       - reports/merge_report.json:
           cache: false
+
+  featurize:
+    cmd: uv run python -m src.features.build_features
+    deps:
+      - data/interim/merged.parquet
+      - src/features/build_features.py
+      - src/features/time_features.py
+    params:
+      - featurize
+    outs:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet
+      - data/processed/feature_spec.json
+    metrics:
+      - reports/featurize_report.json:
+          cache: false

@@ -99,3 +99,50 @@ stages:
       hash: md5
       md5: b93afcdfc3fa7af68efe7f095000d042
       size: 88
+  featurize:
+    cmd: uv run python -m src.features.build_features
+    deps:
+    - path: data/interim/merged.parquet
+      hash: md5
+      md5: b1e188de917398908375583671e54c38
+      size: 8312771
+    - path: src/features/build_features.py
+      hash: md5
+      md5: fb9729a9118e1d3ce2ce2be97c4ef049
+      size: 8532
+    - path: src/features/time_features.py
+      hash: md5
+      md5: 59d46a0513c6bbf0080f77f1ed485e34
+      size: 1912
+    params:
+      params.yaml:
+        featurize:
+          train_end: '2022-12-31'
+          val_year: 2023
+          test_year: 2024
+          rare_location_min_count: 50
+          rare_route_min_count: 30
+          heavy_precip_mm: 2.5
+          covid_start: '2020-03-15'
+          covid_end: '2021-12-31'
+    outs:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: b02d622b37397fa038e36881f8d13354
+      size: 18529
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 9d57c1fb9397ba6f5f8ec65f9be4c8d3
+      size: 836197
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 509245528094c76e0e6ad2e77582fde2
+      size: 3474446
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: fbef5a27718791662ae6ef3902d22a8a
+      size: 797290
+    - path: reports/featurize_report.json
+      hash: md5
+      md5: 78186ca74c60841c32c40a3f12ae98e5
+      size: 787
