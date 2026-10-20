@@ -11,7 +11,6 @@ dependencies = [
     "jupyter>=1.1.1",
     "lightgbm>=4.7.0",
     "matplotlib>=3.11.2",
-    "mlflow>=3.16.1",
     "numpy>=2.4.6",
     "openpyxl>=3.1.5",
     "pandas>=3.0.6",
@@ -23,6 +22,7 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "seaborn>=0.13.2",
     "tabulate>=0.10.0",
+    "wandb>=0.31.0",
     "xgboost>=3.2.0",
 ]
 

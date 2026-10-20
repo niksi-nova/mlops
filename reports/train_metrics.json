@@ -1,0 +1,80 @@
+{
+  "models": {
+    "global_median": {
+      "val_mae": 68.56275254766892,
+      "val_rmse": 130.15458697650692,
+      "val_r2": -0.06800783610881767,
+      "val_median_ae": 38.0,
+      "val_within_30s_pct": 36.21489187941626,
+      "val_within_60s_pct": 72.57820544686291,
+      "train_mae": 65.78354342163577,
+      "training_seconds": 0.009650375024648383
+    },
+    "typical_baseline": {
+      "val_mae": 37.99639242978376,
+      "val_rmse": 96.2454790340412,
+      "val_r2": 0.41599554602025524,
+      "val_median_ae": 10.0,
+      "val_within_30s_pct": 75.55800163334871,
+      "val_within_60s_pct": 86.93036963391684,
+      "train_mae": 35.78050289389703,
+      "training_seconds": 1.5410187188535929e-06
+    },
+    "recent_buses_baseline": {
+      "val_mae": 37.731587543940634,
+      "val_rmse": 91.52705070191368,
+      "val_r2": 0.4718534844156522,
+      "val_median_ae": 18.0,
+      "val_within_30s_pct": 73.77481092213188,
+      "val_within_60s_pct": 86.42545183396655,
+      "train_mae": 35.94058408447247,
+      "training_seconds": 2.9590155463665724e-06
+    },
+    "ridge": {
+      "val_mae": 37.505488769920376,
+      "val_rmse": 227.50846904520847,
+      "val_r2": -2.2632520420418634,
+      "val_median_ae": 15.008449129594482,
+      "val_within_30s_pct": 72.74722153179704,
+      "val_within_60s_pct": 87.59365124454071,
+      "train_mae": 38.13834126006681,
+      "training_seconds": 1.986694459017599
+    },
+    "random_forest": {
+      "val_mae": 30.295162714238227,
+      "val_rmse": 75.53616202816445,
+      "val_r2": 0.6402793977759512,
+      "val_median_ae": 13.08946003061341,
+      "val_within_30s_pct": 75.20008521819408,
+      "val_within_60s_pct": 89.32926179739374,
+      "train_mae": 23.010020193197153,
+      "training_seconds": 117.63901612500194
+    },
+    "lightgbm_l2": {
+      "val_mae": 29.841425895244306,
+      "val_rmse": 74.29048223968907,
+      "val_r2": 0.6520459967708756,
+      "val_median_ae": 13.101516222694741,
+      "val_within_30s_pct": 75.48982707808118,
+      "val_within_60s_pct": 89.57923516670809,
+      "train_mae": 26.03829536434326,
+      "training_seconds": 27.074246208008844
+    },
+    "lightgbm_l1": {
+      "val_mae": 29.433863013075563,
+      "val_rmse": 74.33687184837754,
+      "val_r2": 0.6516113114865376,
+      "val_median_ae": 12.28702058872733,
+      "val_within_30s_pct": 76.26744309910165,
+      "val_within_60s_pct": 89.73546852252956,
+      "train_mae": 25.570087708702093,
+      "training_seconds": 72.33864462500787
+    }
+  },
+  "best_model": "lightgbm_l1",
+  "best_baseline": "recent_buses_baseline",
+  "improvement_pct_over_best_baseline": 21.99145350351847,
+  "improvement_pct_over_global_median": 57.07018472951274,
+  "success_target_pct": 10,
+  "target_met": true
+}

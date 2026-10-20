@@ -53,3 +53,20 @@ stages:
     metrics:
       - reports/featurize_report.json:
           cache: false
+
+  train:
+    cmd: uv run python -m src.models.train
+    deps:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/feature_spec.json
+      - src/models/train.py
+      - src/models/tracking.py
+      - src/models/baselines.py
+    params:
+      - train
+    outs:
+      - models/
+    metrics:
+      - reports/train_metrics.json:
+          cache: false

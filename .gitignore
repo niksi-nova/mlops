@@ -37,9 +37,8 @@ coverage.xml
 # Jupyter
 .ipynb_checkpoints/
 
-# MLflow
-mlruns/
-mlartifacts/
+# Weights & Biases
+wandb/
 
 # IDE / OS
 .vscode/

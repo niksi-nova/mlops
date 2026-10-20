@@ -1,11 +1,11 @@
-"""MLflow tracking setup shared by src/models/train.py and
-src/models/tune_lightgbm.py.
+"""Weights & Biases tracking setup shared by src/models/train.py and
+src/models/sweep_train.py.
 
-Loads credentials from .env (never logged or printed) and resolves the
-tracking URI: MLFLOW_TRACKING_URI from the environment if set, otherwise a
-local ./mlruns folder with a warning. Also builds the standard run tags
-(git commit, branch, dirty flag, featurize-stage data hash, dataset
-version) so every run records exactly what code and data produced it.
+Resolves whether a W&B login is available (falling back to WANDB_MODE=
+offline with a warning if not - never printing or logging the API key
+itself), and builds the standard lineage info (git commit, branch, dirty
+flag, featurize-stage data hash, dataset version) that every run records in
+its config so it's clear exactly what code and data produced it.
 """
 
 from __future__ import annotations
@@ -14,35 +14,37 @@ import hashlib
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
-import mlflow
+import wandb
 import yaml
-from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PARAMS_PATH = PROJECT_ROOT / "params.yaml"
 DVC_LOCK_PATH = PROJECT_ROOT / "dvc.lock"
-DATASET_VERSION = "data-v2"
+DATASET_VERSION = "delhi-data-v2"
 
 
-def configure_tracking() -> str:
-    """Load .env, then point MLflow at MLFLOW_TRACKING_URI if set, else a
-    local ./mlruns folder (with a warning). Returns the tracking URI used.
+def load_params() -> dict:
+    """Load params.yaml from the project root."""
+    with open(PARAMS_PATH) as f:
+        return yaml.safe_load(f)
 
-    Credentials (MLFLOW_TRACKING_USERNAME/PASSWORD) are read by MLflow
-    itself from the environment; this function never reads, prints or logs
-    them."""
-    load_dotenv(PROJECT_ROOT / ".env")
 
-    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
-    if not tracking_uri:
-        tracking_uri = f"file:{PROJECT_ROOT / 'mlruns'}"
+def ensure_wandb_login() -> bool:
+    """Check whether a W&B login is available (without prompting or ever
+    printing/logging the API key itself). If not - and the caller hasn't
+    already set WANDB_MODE explicitly (e.g. to "disabled" for tests) - fall
+    back to WANDB_MODE=offline and print a warning. Returns True if logged
+    in."""
+    logged_in = bool(wandb.login(timeout=0))
+    if not logged_in and "WANDB_MODE" not in os.environ:
+        os.environ["WANDB_MODE"] = "offline"
         print(
-            "WARNING: MLFLOW_TRACKING_URI is not set; falling back to a "
-            f"local tracking store at {tracking_uri}"
+            "WARNING: no W&B login available (run `uv run wandb login`); "
+            "falling back to WANDB_MODE=offline - runs will be logged locally only."
         )
-
-    mlflow.set_tracking_uri(tracking_uri)
-    return tracking_uri
+    return logged_in
 
 
 def _run(cmd: list[str]) -> str:
@@ -71,7 +73,7 @@ def git_branch() -> str:
     return _run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
 
 
-GIT_DIRTY_IGNORED_PREFIXES = ("dvc.lock", "reports/", "models/", "data/", "mlruns/", ".dvc/")
+GIT_DIRTY_IGNORED_PREFIXES = ("dvc.lock", "reports/", "models/", "data/", "wandb/", ".dvc/")
 
 
 def _porcelain_path(line: str) -> str:
@@ -88,7 +90,7 @@ def _porcelain_path(line: str) -> str:
 
 def dirty_files() -> list[str]:
     """Paths from `git status --porcelain` that are NOT under an ignored
-    prefix (dvc.lock, reports/, models/, data/, mlruns/, .dvc/). Empty
+    prefix (dvc.lock, reports/, models/, data/, wandb/, .dvc/). Empty
     means the tree is clean (for tagging purposes)."""
     output = _run(["git", "status", "--porcelain"])
     paths = [_porcelain_path(line) for line in output.splitlines()]
@@ -97,7 +99,7 @@ def dirty_files() -> list[str]:
 
 def git_is_dirty() -> bool:
     """True if the working tree has uncommitted changes outside of
-    dvc.lock, reports/, models/, data/, mlruns/ and .dvc/ — those are
+    dvc.lock, reports/, models/, data/, wandb/ and .dvc/ — those are
     pipeline-internal paths that routinely change during `dvc repro` and
     would otherwise mark every run as dirty."""
     return bool(dirty_files())
@@ -120,16 +122,33 @@ def featurize_outputs_md5(dvc_lock_path: Path = DVC_LOCK_PATH) -> str:
     return hashlib.md5("".join(file_hashes).encode()).hexdigest()
 
 
-def run_tags() -> dict[str, str]:
-    """Standard tags to attach to every MLflow run: git commit, branch,
-    dirty flag (+ the non-ignored dirty paths, so it's clear WHY a run is
-    dirty), the featurize-stage data hash, and the dataset version."""
+def lineage_config() -> dict[str, Any]:
+    """Git commit/branch/dirty-state, the featurize-stage data hash, and the
+    dataset version — everything needed to know exactly what code and data
+    produced a run. Intended to be merged into wandb.config."""
     dirty = dirty_files()
     return {
         "git_commit": git_commit_hash(),
         "git_branch": git_branch(),
-        "git_dirty": str(bool(dirty)),
-        "git_dirty_files": ",".join(dirty),
+        "git_dirty": bool(dirty),
+        "git_dirty_files": dirty,
         "data_processed_md5": featurize_outputs_md5(),
         "dataset_version": DATASET_VERSION,
     }
+
+
+def start_run(name: str, job_type: str, config: dict[str, Any], group: str | None = None, tags: list[str] | None = None):
+    """Start a W&B run named `name` in params.yaml's train.wandb_project,
+    with `config` merged with the standard lineage info (git/data/dataset
+    version) in wandb.config. Falls back to offline mode if not logged in."""
+    ensure_wandb_login()
+    params = load_params()
+    full_config = {**config, **lineage_config()}
+    return wandb.init(
+        project=params["train"]["wandb_project"],
+        name=name,
+        job_type=job_type,
+        group=group,
+        tags=tags,
+        config=full_config,
+    )

@@ -134,3 +134,72 @@ stages:
       hash: md5
       md5: 861a119ac618af307d9284525453a068
       size: 1381
+  train:
+    cmd: uv run python -m src.models.train
+    deps:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: 206a8ce9c2e658a6611f9d29a1a9c45f
+      size: 96217
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 77725a0717a4e3a9fd9896d2a331b523
+      size: 9612028
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 9ab6421b715102302378162c61105b31
+      size: 2252264
+    - path: src/models/baselines.py
+      hash: md5
+      md5: f5dbf7d4b8ae4ae87b9465e1c54ca3a0
+      size: 1540
+    - path: src/models/tracking.py
+      hash: md5
+      md5: be015081733470ba8763cb654d5115ab
+      size: 5700
+    - path: src/models/train.py
+      hash: md5
+      md5: 9b0bf1cdde4ec74a13d8f68e1f3630f0
+      size: 17158
+    params:
+      params.yaml:
+        train:
+          wandb_project: delhi-bus-delay
+          target: travel_time_s
+          random_state: 42
+          success_target_pct: 10
+          ridge:
+            alpha: 1.0
+          random_forest:
+            n_estimators: 200
+            max_depth: 20
+            min_samples_leaf: 5
+          lightgbm_l2:
+            n_estimators: 3000
+            learning_rate: 0.05
+            num_leaves: 63
+            min_child_samples: 50
+            subsample: 0.8
+            subsample_freq: 1
+            colsample_bytree: 0.8
+            early_stopping_rounds: 100
+          lightgbm_l1:
+            n_estimators: 3000
+            learning_rate: 0.05
+            num_leaves: 63
+            min_child_samples: 50
+            subsample: 0.8
+            subsample_freq: 1
+            colsample_bytree: 0.8
+            early_stopping_rounds: 100
+            objective: l1
+    outs:
+    - path: models/
+      hash: md5
+      md5: cb2b73924bb3d5778ec445e2696bdf14.dir
+      size: 682421912
+      nfiles: 12
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: a33eacc6b07e91bebd5ec2c837325a3f
+      size: 2751
