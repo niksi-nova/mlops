@@ -1,36 +1,3 @@
-data:
-  ckan_base: https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/
-  package_id: ttc-bus-delay-data
-  historical_years: [2018, 2019, 2020, 2021, 2022, 2023, 2024]
-
-clean:
-  min_delay: 0          # drop negative delays
-  max_delay: 300        # drop delays above 5 hours as recording errors
-  drop_zero_delay: false
-
-weather:
-  latitude: 43.65
-  longitude: -79.38
-  timezone: America/Toronto
-  hourly_variables:
-    - temperature_2m
-    - precipitation
-    - rain
-    - snowfall
-    - wind_speed_10m
-
-featurize:
-  train_end: "2022-12-31"
-  val_year: 2023
-  test_year: 2024
-  rare_location_min_count: 50
-  rare_route_min_count: 30
-  heavy_precip_mm: 2.5
-  covid_start: "2020-03-15"
-  covid_end: "2021-12-31"
-  te_smoothing: 20
-  te_folds: 5
-
 train:
   experiment_name: ttc-delay-baselines
   log_target: true
@@ -58,3 +25,7 @@ train:
     colsample_bytree: 0.8
     early_stopping_rounds: 100
     objective: l1
+
+data:
+  city: Delhi
+  timezone: Asia/Kolkata
