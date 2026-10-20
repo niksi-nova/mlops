@@ -72,3 +72,65 @@ stages:
       hash: md5
       md5: a4a70e59c81d47f912eb690330ca82d6
       size: 362
+  featurize:
+    cmd: uv run python -m src.features.build_features
+    deps:
+    - path: data/interim/segments.parquet
+      hash: md5
+      md5: f4a7bcd7bd8e821aa68699ae82060fe5
+      size: 5130200
+    - path: reports/validation_report.json
+      hash: md5
+      md5: a4a70e59c81d47f912eb690330ca82d6
+      size: 362
+    - path: src/features/build_features.py
+      hash: md5
+      md5: c623cc3a0e02be4c17f50cbb6342a958
+      size: 19802
+    - path: src/features/time_features.py
+      hash: md5
+      md5: a120dd6194b624131efd851fc4a89667
+      size: 3966
+    params:
+      params.yaml:
+        featurize:
+          train_days:
+          - 1
+          - 61
+          val_days:
+          - 62
+          - 76
+          test_days:
+          - 77
+          - 92
+          peak_am:
+          - 8
+          - 10
+          peak_pm:
+          - 17
+          - 20
+          prev_n_buses: 3
+          recent_window_minutes: 30
+          te_folds: 5
+          rare_vehicle_min_count: 500
+    outs:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: 206a8ce9c2e658a6611f9d29a1a9c45f
+      size: 96217
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 15caa783acb776ed6c66fd2de0e62564
+      size: 2491232
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 77725a0717a4e3a9fd9896d2a331b523
+      size: 9612028
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 9ab6421b715102302378162c61105b31
+      size: 2252264
+    - path: reports/featurize_report.json
+      hash: md5
+      md5: 861a119ac618af307d9284525453a068
+      size: 1381

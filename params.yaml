@@ -39,3 +39,14 @@ clean:
 segments:
   max_segment_seconds: 1800   # drop segments longer than 30 min (recording errors)
   min_segment_seconds: 1      # drop zero/negative times
+
+featurize:
+  train_days: [1, 61]
+  val_days: [62, 76]
+  test_days: [77, 92]
+  peak_am: [8, 10]
+  peak_pm: [17, 20]
+  prev_n_buses: 3
+  recent_window_minutes: 30
+  te_folds: 5
+  rare_vehicle_min_count: 500

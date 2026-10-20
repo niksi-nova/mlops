@@ -1,0 +1,53 @@
+{
+  "rows": {
+    "train": 606967,
+    "val": 140815,
+    "test": 153705
+  },
+  "day_range": {
+    "train": {
+      "min_day_index": 1,
+      "max_day_index": 61
+    },
+    "val": {
+      "min_day_index": 62,
+      "max_day_index": 76
+    },
+    "test": {
+      "min_day_index": 77,
+      "max_day_index": 92
+    }
+  },
+  "n_features": 25,
+  "has_prev_bus_share": {
+    "train": 0.9662469294047288,
+    "val": 0.9627312431204063,
+    "test": 0.962343450115481
+  },
+  "prev_feature_means": {
+    "train": {
+      "prev_bus_tt_s": 112.81489767977502,
+      "prev3_median_tt_s": 108.44868584288767,
+      "headway_s": 1179.2492095945909,
+      "n_buses_recent": 2.0486121980272403,
+      "own_prev_segment_tt_s": 116.19632945448434,
+      "own_prev_segment_ratio": 1.1512174192980356
+    },
+    "val": {
+      "prev_bus_tt_s": 115.76937116074282,
+      "prev3_median_tt_s": 111.14794943720484,
+      "headway_s": 1297.7655789511061,
+      "n_buses_recent": 1.8601924510883074,
+      "own_prev_segment_tt_s": 119.76739693924652,
+      "own_prev_segment_ratio": 1.181708638209202
+    },
+    "test": {
+      "prev_bus_tt_s": 116.42881168472073,
+      "prev3_median_tt_s": 112.04371035425002,
+      "headway_s": 1278.808464265964,
+      "n_buses_recent": 1.9447773332032139,
+      "own_prev_segment_tt_s": 121.06385934094531,
+      "own_prev_segment_ratio": 1.1984316416864425
+    }
+  }
+}
