@@ -155,8 +155,8 @@ stages:
       size: 1540
     - path: src/models/tracking.py
       hash: md5
-      md5: be015081733470ba8763cb654d5115ab
-      size: 5700
+      md5: 01a6213d7904e0aa697d8b43d74a7c39
+      size: 5833
     - path: src/models/train.py
       hash: md5
       md5: 9b0bf1cdde4ec74a13d8f68e1f3630f0
@@ -185,6 +185,88 @@ stages:
             early_stopping_rounds: 100
           lightgbm_l1:
             n_estimators: 3000
+            learning_rate: 0.02217
+            num_leaves: 255
+            min_child_samples: 50
+            subsample: 0.879
+            subsample_freq: 1
+            colsample_bytree: 0.829
+            reg_lambda: 0.0265
+            early_stopping_rounds: 100
+            objective: l1
+    outs:
+    - path: models/
+      hash: md5
+      md5: cb30851a91c12d4a128611a25cf4a50a.dir
+      size: 788521888
+      nfiles: 12
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 9d6fcf1e16155329925b4fd630e6ab83
+      size: 2755
+  evaluate:
+    cmd: uv run python -m src.models.evaluate
+    deps:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: 206a8ce9c2e658a6611f9d29a1a9c45f
+      size: 96217
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: 15caa783acb776ed6c66fd2de0e62564
+      size: 2491232
+    - path: data/processed/val.parquet
+      hash: md5
+      md5: 9ab6421b715102302378162c61105b31
+      size: 2252264
+    - path: models/
+      hash: md5
+      md5: cb30851a91c12d4a128611a25cf4a50a.dir
+      size: 788521888
+      nfiles: 12
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 9d6fcf1e16155329925b4fd630e6ab83
+      size: 2755
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 993bc565f22ffeaf3c056e427427260c
+      size: 17312
+    params:
+      params.yaml:
+        featurize:
+          train_days:
+          - 1
+          - 61
+          val_days:
+          - 62
+          - 76
+          test_days:
+          - 77
+          - 92
+          peak_am:
+          - 8
+          - 10
+          peak_pm:
+          - 17
+          - 20
+          prev_n_buses: 3
+          recent_window_minutes: 30
+          te_folds: 5
+          rare_vehicle_min_count: 500
+        train:
+          wandb_project: delhi-bus-delay
+          target: travel_time_s
+          random_state: 42
+          success_target_pct: 10
+          ridge:
+            alpha: 1.0
+          random_forest:
+            n_estimators: 200
+            max_depth: 20
+            min_samples_leaf: 5
+          lightgbm_l2:
+            n_estimators: 3000
             learning_rate: 0.05
             num_leaves: 63
             min_child_samples: 50
@@ -192,14 +274,24 @@ stages:
             subsample_freq: 1
             colsample_bytree: 0.8
             early_stopping_rounds: 100
+          lightgbm_l1:
+            n_estimators: 3000
+            learning_rate: 0.02217
+            num_leaves: 255
+            min_child_samples: 50
+            subsample: 0.879
+            subsample_freq: 1
+            colsample_bytree: 0.829
+            reg_lambda: 0.0265
+            early_stopping_rounds: 100
             objective: l1
     outs:
-    - path: models/
+    - path: reports/figures/eval/
       hash: md5
-      md5: cb2b73924bb3d5778ec445e2696bdf14.dir
-      size: 682421912
-      nfiles: 12
-    - path: reports/train_metrics.json
+      md5: 603d677537500cda53e689e8556fb523.dir
+      size: 482251
+      nfiles: 7
+    - path: reports/test_metrics.json
       hash: md5
-      md5: a33eacc6b07e91bebd5ec2c837325a3f
-      size: 2751
+      md5: 0a1a3a2989a0ae0ea5548f2aa0e09082
+      size: 9807

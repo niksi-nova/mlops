@@ -8,7 +8,7 @@
       "val_within_30s_pct": 36.21489187941626,
       "val_within_60s_pct": 72.57820544686291,
       "train_mae": 65.78354342163577,
-      "training_seconds": 0.009650375024648383
+      "training_seconds": 0.009227917005773634
     },
     "typical_baseline": {
       "val_mae": 37.99639242978376,
@@ -18,7 +18,7 @@
       "val_within_30s_pct": 75.55800163334871,
       "val_within_60s_pct": 86.93036963391684,
       "train_mae": 35.78050289389703,
-      "training_seconds": 1.5410187188535929e-06
+      "training_seconds": 1.7909915186464787e-06
     },
     "recent_buses_baseline": {
       "val_mae": 37.731587543940634,
@@ -28,7 +28,7 @@
       "val_within_30s_pct": 73.77481092213188,
       "val_within_60s_pct": 86.42545183396655,
       "train_mae": 35.94058408447247,
-      "training_seconds": 2.9590155463665724e-06
+      "training_seconds": 1.5840050764381886e-06
     },
     "ridge": {
       "val_mae": 37.505488769920376,
@@ -38,7 +38,7 @@
       "val_within_30s_pct": 72.74722153179704,
       "val_within_60s_pct": 87.59365124454071,
       "train_mae": 38.13834126006681,
-      "training_seconds": 1.986694459017599
+      "training_seconds": 1.9683890829910524
     },
     "random_forest": {
       "val_mae": 30.295162714238227,
@@ -48,7 +48,7 @@
       "val_within_30s_pct": 75.20008521819408,
       "val_within_60s_pct": 89.32926179739374,
       "train_mae": 23.010020193197153,
-      "training_seconds": 117.63901612500194
+      "training_seconds": 144.88305662502535
     },
     "lightgbm_l2": {
       "val_mae": 29.841425895244306,
@@ -58,23 +58,23 @@
       "val_within_30s_pct": 75.48982707808118,
       "val_within_60s_pct": 89.57923516670809,
       "train_mae": 26.03829536434326,
-      "training_seconds": 27.074246208008844
+      "training_seconds": 27.563095749996137
     },
     "lightgbm_l1": {
-      "val_mae": 29.433863013075563,
-      "val_rmse": 74.33687184837754,
-      "val_r2": 0.6516113114865376,
-      "val_median_ae": 12.28702058872733,
-      "val_within_30s_pct": 76.26744309910165,
-      "val_within_60s_pct": 89.73546852252956,
-      "train_mae": 25.570087708702093,
-      "training_seconds": 72.33864462500787
+      "val_mae": 29.334864041258612,
+      "val_rmse": 74.07166636602473,
+      "val_r2": 0.6540927119985102,
+      "val_median_ae": 12.26152393525254,
+      "val_within_30s_pct": 76.29442886056172,
+      "val_within_60s_pct": 89.77594716471967,
+      "train_mae": 24.005914039845134,
+      "training_seconds": 199.68931054099812
     }
   },
   "best_model": "lightgbm_l1",
   "best_baseline": "recent_buses_baseline",
-  "improvement_pct_over_best_baseline": 21.99145350351847,
-  "improvement_pct_over_global_median": 57.07018472951274,
+  "improvement_pct_over_best_baseline": 22.253830409079786,
+  "improvement_pct_over_global_median": 57.214576499297834,
   "success_target_pct": 10,
   "target_met": true
 }

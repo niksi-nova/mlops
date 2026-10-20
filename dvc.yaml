@@ -70,3 +70,21 @@ stages:
     metrics:
       - reports/train_metrics.json:
           cache: false
+
+  evaluate:
+    cmd: uv run python -m src.models.evaluate
+    deps:
+      - data/processed/test.parquet
+      - data/processed/val.parquet
+      - data/processed/feature_spec.json
+      - models/
+      - reports/train_metrics.json
+      - src/models/evaluate.py
+    params:
+      - train
+      - featurize
+    metrics:
+      - reports/test_metrics.json:
+          cache: false
+    plots:
+      - reports/figures/eval/
