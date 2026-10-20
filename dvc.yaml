@@ -1,1 +1,37 @@
-stages: {}
+stages:
+  clean:
+    cmd: uv run python -m src.data.clean
+    deps:
+      - data/raw/delhi_gps
+      - src/data/clean.py
+    params:
+      - clean
+    outs:
+      - data/interim/stop_events.parquet
+    metrics:
+      - reports/cleaning_report.json:
+          cache: false
+
+  build_segments:
+    cmd: uv run python -m src.data.build_segments
+    deps:
+      - data/interim/stop_events.parquet
+      - src/data/build_segments.py
+    params:
+      - segments
+    outs:
+      - data/interim/segments.parquet
+    metrics:
+      - reports/segments_report.json:
+          cache: false
+
+  validate:
+    cmd: uv run python -m src.data.validate
+    deps:
+      - data/interim/segments.parquet
+      - src/data/validate.py
+    params:
+      - segments
+    metrics:
+      - reports/validation_report.json:
+          cache: false

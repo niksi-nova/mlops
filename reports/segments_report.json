@@ -1,0 +1,29 @@
+{
+  "segments_built": 901525,
+  "segments_removed_zero_span": 1,
+  "segments_before_bounds_filter": 901524,
+  "segments_removed_out_of_bounds": 37,
+  "segments_after_bounds_filter": 901487,
+  "rows_per_route_direction_month": {
+    "425_down_month1": 32066,
+    "425_down_month2": 30923,
+    "425_down_month3": 31693,
+    "425_up_month1": 28367,
+    "425_up_month2": 27603,
+    "425_up_month3": 28669,
+    "534_down_month1": 122880,
+    "534_down_month2": 121020,
+    "534_down_month3": 115958,
+    "534_up_month1": 121672,
+    "534_up_month2": 122436,
+    "534_up_month3": 118200
+  },
+  "share_segments_nodes_spanned_gt_1": 0.03835551705127195,
+  "travel_time_s_percentiles": {
+    "p50": 90.0,
+    "p75": 140.0,
+    "p90": 220.0,
+    "p95": 320.0,
+    "p99": 658.0
+  }
+}

@@ -1,2 +1,2 @@
-/historical_clean.parquet
-/merged.parquet
+/stop_events.parquet
+/segments.parquet

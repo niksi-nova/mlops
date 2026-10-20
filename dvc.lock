@@ -1,0 +1,74 @@
+schema: '2.0'
+stages:
+  clean:
+    cmd: uv run python -m src.data.clean
+    deps:
+    - path: data/raw/delhi_gps
+      hash: md5
+      md5: f852359f98ef2397f0b84137357eec1a.dir
+      size: 26428039
+      nfiles: 184
+    - path: src/data/clean.py
+      hash: md5
+      md5: bc09abf0ad3fbda519dc3b017c3ee795
+      size: 9644
+    params:
+      params.yaml:
+        clean:
+          trip_gap_minutes: 30
+          min_nodes_per_trip: 5
+    outs:
+    - path: data/interim/stop_events.parquet
+      hash: md5
+      md5: 0c5d0c6bc04c5ec5838ef3e19f6ae9f0
+      size: 2501077
+    - path: reports/cleaning_report.json
+      hash: md5
+      md5: cd5b190bf5fd7bcac7b0ca678fcd9f22
+      size: 511
+  build_segments:
+    cmd: uv run python -m src.data.build_segments
+    deps:
+    - path: data/interim/stop_events.parquet
+      hash: md5
+      md5: 0c5d0c6bc04c5ec5838ef3e19f6ae9f0
+      size: 2501077
+    - path: src/data/build_segments.py
+      hash: md5
+      md5: 71aebd1cf9fc4e9c71bda7f235679cc1
+      size: 4886
+    params:
+      params.yaml:
+        segments:
+          max_segment_seconds: 1800
+          min_segment_seconds: 1
+    outs:
+    - path: data/interim/segments.parquet
+      hash: md5
+      md5: f4a7bcd7bd8e821aa68699ae82060fe5
+      size: 5130200
+    - path: reports/segments_report.json
+      hash: md5
+      md5: 9fa2a59468270262327187626797279c
+      size: 773
+  validate:
+    cmd: uv run python -m src.data.validate
+    deps:
+    - path: data/interim/segments.parquet
+      hash: md5
+      md5: f4a7bcd7bd8e821aa68699ae82060fe5
+      size: 5130200
+    - path: src/data/validate.py
+      hash: md5
+      md5: d622839bac505b03f37d77599f89f2f5
+      size: 4665
+    params:
+      params.yaml:
+        segments:
+          max_segment_seconds: 1800
+          min_segment_seconds: 1
+    outs:
+    - path: reports/validation_report.json
+      hash: md5
+      md5: a4a70e59c81d47f912eb690330ca82d6
+      size: 362

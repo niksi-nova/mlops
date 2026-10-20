@@ -31,3 +31,11 @@ data:
   timezone: Asia/Kolkata
   source_url: https://github.com/bus-data/bus-data.github.io/raw/master/asset/dataset.zip
   months_included: [1, 2, 3]
+
+clean:
+  trip_gap_minutes: 30        # same vehicle idle longer than this = new trip
+  min_nodes_per_trip: 5       # drop trips with fewer recorded stops
+
+segments:
+  max_segment_seconds: 1800   # drop segments longer than 30 min (recording errors)
+  min_segment_seconds: 1      # drop zero/negative times

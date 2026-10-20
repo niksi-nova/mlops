@@ -1,0 +1,22 @@
+{
+  "raw_rows": 924375,
+  "duplicate_rows_removed": 0,
+  "rows_after_dedup": 924375,
+  "trips_before_filtering": 22127,
+  "trips_removed": {
+    "node_backward": 0,
+    "time_backward": 11,
+    "too_few_nodes": 1000,
+    "total_distinct_trips_removed": 1011
+  },
+  "rows_removed_with_bad_trips": 1734,
+  "final_rows": 922641,
+  "final_trips": 21116,
+  "trips_per_route_direction": {
+    "425_down": 2966,
+    "425_up": 2902,
+    "534_down": 7500,
+    "534_up": 7748
+  },
+  "midnight_crossing_trips_fixed": 38
+}
