@@ -49,3 +49,7 @@ mlartifacts/
 # Partial downloads (src/data/ingest.py writes here before renaming)
 *.part
 /models
+
+# Ingest cache (not DVC-tracked; src/data/ingest.py downloads/extracts here
+# before staging the included months into data/raw/)
+/data/cache/

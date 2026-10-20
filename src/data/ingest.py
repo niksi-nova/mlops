@@ -1,8 +1,11 @@
-"""Download and unzip the raw Delhi bus GPS dataset.
+"""Download and stage the raw Delhi bus GPS dataset.
 
-Downloads the zip archive at `data.source_url` (in params.yaml) into
-data/raw/delhi_gps/ and extracts it there. Skips the download/extraction
-if the files already exist.
+Downloads the zip archive at `data.source_url` (in params.yaml) into the
+git-ignored data/cache/ folder and extracts it there. Then copies only the
+months listed in `data.months_included` into data/raw/delhi_gps/ (the
+DVC-tracked raw data folder), preserving the original Month_<m>/<route>/
+Day<d>.xlsx layout and removing any month folders that are no longer
+included.
 
 Usage:
     uv run python -m src.data.ingest
@@ -10,6 +13,7 @@ Usage:
 
 from __future__ import annotations
 
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -19,8 +23,9 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PARAMS_PATH = PROJECT_ROOT / "params.yaml"
+CACHE_DIR = PROJECT_ROOT / "data" / "cache" / "delhi_gps"
+ZIP_PATH = CACHE_DIR / "dataset.zip"
 RAW_DIR = PROJECT_ROOT / "data" / "raw" / "delhi_gps"
-ZIP_PATH = RAW_DIR / "dataset.zip"
 
 TIMEOUT = 60
 CHUNK_SIZE = 1 << 16  # 64 KiB
@@ -77,15 +82,40 @@ def extract(zip_path: Path, dest_dir: Path) -> None:
         print(f"  OK    {path.relative_to(PROJECT_ROOT)} ({size:,} bytes)")
 
 
+def stage_months(cache_dir: Path, raw_dir: Path, months_included: list[int]) -> None:
+    included_names = {f"Month_{m}" for m in months_included}
+
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    # remove any raw month folders that are no longer included
+    for existing in sorted(raw_dir.glob("Month_*")):
+        if existing.is_dir() and existing.name not in included_names:
+            shutil.rmtree(existing)
+            print(f"  REMOVE {existing.relative_to(PROJECT_ROOT)} (not in months_included)")
+
+    for month_name in sorted(included_names):
+        src = cache_dir / month_name
+        if not src.is_dir():
+            raise IngestError(f"month folder {month_name!r} not found in cache at {src}")
+        dest = raw_dir / month_name
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(src, dest)
+        print(f"  COPY  {src.relative_to(PROJECT_ROOT)} -> {dest.relative_to(PROJECT_ROOT)}")
+
+
 def main() -> int:
     params = load_params()
     source_url = params["data"]["source_url"]
+    months_included = params["data"]["months_included"]
 
     print(f"Downloading {source_url}")
     try:
         download(source_url, ZIP_PATH)
-        print("Extracting archive")
-        extract(ZIP_PATH, RAW_DIR)
+        print("Extracting archive into cache")
+        extract(ZIP_PATH, CACHE_DIR)
+        print(f"Staging months {months_included} into {RAW_DIR.relative_to(PROJECT_ROOT)}")
+        stage_months(CACHE_DIR, RAW_DIR, months_included)
     except IngestError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
