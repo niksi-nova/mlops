@@ -30,4 +30,4 @@ data:
   city: Delhi
   timezone: Asia/Kolkata
   source_url: https://github.com/bus-data/bus-data.github.io/raw/master/asset/dataset.zip
-  months_included: [1, 2]
+  months_included: [1, 2, 3]
