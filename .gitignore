@@ -52,3 +52,5 @@ wandb/
 # Ingest cache (not DVC-tracked; src/data/ingest.py downloads/extracts here
 # before staging the included months into data/raw/)
 /data/cache/
+tmp/
+.uv-cache/

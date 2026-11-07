@@ -298,18 +298,26 @@ stages:
   quality_gate:
     cmd: uv run python -m src.models.quality_gate
     deps:
+    - path: models/lightgbm_l1.joblib
+      hash: md5
+      md5: ab5edf3b167a1204c44bd9f9094df4ee
+      size: 70043090
     - path: reports/test_metrics.json
       hash: md5
       md5: 8580a5681bf4c001ed4dbcbb635b2ae5
       size: 10261
+    - path: reports/train_metrics.json
+      hash: md5
+      md5: 9d6fcf1e16155329925b4fd630e6ab83
+      size: 2755
     - path: src/models/quality_gate.py
       hash: md5
-      md5: 22086fca946364d0bf9b6378c97fb2f7
-      size: 5350
+      md5: 543c7642dc09bcf319b96595a328e10f
+      size: 15541
     - path: src/models/tracking.py
       hash: md5
-      md5: 515d1ac610672891abc55fda3e879648
-      size: 6020
+      md5: f5e8f88d9485f6d73827e118e5ee8ddb
+      size: 6238
     params:
       params.yaml:
         quality_gate:
@@ -317,8 +325,40 @@ stages:
           max_test_mae: 35.0
           max_generalisation_gap_pct: 10.0
           min_within_60s_pct: 85.0
+          max_inference_latency_ms: 50.0
+          max_model_size_mb: 100.0
+          min_slice_samples: 100
+          max_slice_mae_ratio: 1.8
+          max_prev_bus_drop_s: 15.0
+        segments:
+          max_segment_seconds: 1800
+          min_segment_seconds: 1
     outs:
     - path: reports/quality_gate.json
       hash: md5
-      md5: 9a5df93e7c675526afaf703aca340c1f
-      size: 871
+      md5: 2adb40f11607cc51d480af6f5e04a71f
+      size: 7152
+  register:
+    cmd: uv run python -m src.models.registry
+    deps:
+    - path: data/processed/feature_spec.json
+      hash: md5
+      md5: 56e0ba112ab339fd0fda679b8844ed85
+      size: 99726
+    - path: models/lightgbm_l1.joblib
+      hash: md5
+      md5: ab5edf3b167a1204c44bd9f9094df4ee
+      size: 70043090
+    - path: reports/quality_gate.json
+      hash: md5
+      md5: 2adb40f11607cc51d480af6f5e04a71f
+      size: 7152
+    - path: src/models/registry.py
+      hash: md5
+      md5: b9a48e010012d80c0364fc8bcfbe516d
+      size: 21844
+    outs:
+    - path: reports/model_registry.json
+      hash: md5
+      md5: 4895a32847df78caab6fea43dfb725d7
+      size: 3195

@@ -1,10 +1,60 @@
 {
   "passed": true,
-  "best_model": "lightgbm_l1",
+  "model_id": "lightgbm_l1",
   "best_baseline": "recent_buses_baseline",
+  "lineage": {
+    "git_commit": "eb4863d2e97d6e3ca3dbe4753c4b60b7f3fd9e17",
+    "git_branch": "phase2-testing-registry",
+    "git_dirty": true,
+    "git_dirty_files": [
+      ".gitignore",
+      "dvc.yaml",
+      "params.yaml",
+      "src/models/__init__.py",
+      "src/models/evaluate.py",
+      "src/models/quality_gate.py",
+      "src/models/tracking.py",
+      "tests/test_quality_gate.py",
+      "PROJECT_EXPLANATION.txt",
+      "TIME_FEATURES_EXPLANATION.txt",
+      "docs/model_risk_report.md",
+      "src/models/registry.py",
+      "tests/test_model.py",
+      "tests/test_registry.py"
+    ],
+    "data_processed_md5": "4e8867e7f5d6f78eb53433f34bb7db93",
+    "dataset_version": "delhi-data-v2"
+  },
+  "dataset_version": "delhi-data-v2",
+  "evaluation_metrics": {
+    "test_mae": 30.603271077989092,
+    "val_mae": 29.334864041258612,
+    "generalisation_gap_pct": 4.323889263459694,
+    "within_60s_pct": 89.35298136039816,
+    "improvement_pct_over_typical": 25.882159431743272,
+    "improvement_pct_over_recent_buses": 19.928448101321898
+  },
+  "threshold_config": {
+    "min_improvement_pct_over_baseline": 10.0,
+    "max_test_mae": 35.0,
+    "max_generalisation_gap_pct": 10.0,
+    "min_within_60s_pct": 85.0,
+    "max_inference_latency_ms": 50.0,
+    "max_model_size_mb": 100.0,
+    "min_slice_samples": 100,
+    "max_slice_mae_ratio": 1.8,
+    "max_prev_bus_drop_s": 15.0
+  },
   "checks": {
-    "baseline_improvement": {
-      "metric": "improvement_pct_over_best_baseline",
+    "improvement_over_typical_baseline": {
+      "metric": "improvement_pct_over_typical_baseline",
+      "value": 25.882159431743272,
+      "threshold": 10.0,
+      "operator": ">=",
+      "passed": true
+    },
+    "improvement_over_recent_buses_baseline": {
+      "metric": "improvement_pct_over_recent_buses_baseline",
       "value": 19.928448101321898,
       "threshold": 10.0,
       "operator": ">=",
@@ -30,6 +80,199 @@
       "threshold": 85.0,
       "operator": ">=",
       "passed": true
+    },
+    "model_artifact_size": {
+      "metric": "model_size_mb",
+      "value": 66.79829597473145,
+      "threshold": 100.0,
+      "operator": "<=",
+      "passed": true
+    },
+    "single_row_inference_latency": {
+      "metric": "median_latency_ms",
+      "value": 15.70179994450882,
+      "threshold": 50.0,
+      "operator": "<=",
+      "passed": true
+    },
+    "prediction_sanity": {
+      "metric": "sanity_checks_passed",
+      "value": 1.0,
+      "threshold": 1.0,
+      "operator": "==",
+      "passed": true
     }
-  }
+  },
+  "hourly_slices": [
+    {
+      "hour": 4,
+      "n": 1,
+      "mae": 73.71538333797992,
+      "ratio_to_overall": 2.408741965854706,
+      "status": "INSUFFICIENT_DATA"
+    },
+    {
+      "hour": 19,
+      "n": 7147,
+      "mae": 44.57343253420931,
+      "ratio_to_overall": 1.456492425944233,
+      "status": "PASS"
+    },
+    {
+      "hour": 18,
+      "n": 8074,
+      "mae": 43.08166661779028,
+      "ratio_to_overall": 1.4077471165746094,
+      "status": "PASS"
+    },
+    {
+      "hour": 14,
+      "n": 9622,
+      "mae": 38.047535220274014,
+      "ratio_to_overall": 1.2432506029605146,
+      "status": "PASS"
+    },
+    {
+      "hour": 17,
+      "n": 9037,
+      "mae": 38.017430138132276,
+      "ratio_to_overall": 1.2422668819045197,
+      "status": "PASS"
+    },
+    {
+      "hour": 15,
+      "n": 9680,
+      "mae": 37.01076488617618,
+      "ratio_to_overall": 1.20937284095737,
+      "status": "PASS"
+    },
+    {
+      "hour": 16,
+      "n": 9639,
+      "mae": 37.00034614175925,
+      "ratio_to_overall": 1.2090323955066082,
+      "status": "PASS"
+    },
+    {
+      "hour": 13,
+      "n": 8935,
+      "mae": 36.137816515645845,
+      "ratio_to_overall": 1.1808481656602188,
+      "status": "PASS"
+    },
+    {
+      "hour": 20,
+      "n": 7025,
+      "mae": 35.84441700110898,
+      "ratio_to_overall": 1.1712609710825814,
+      "status": "PASS"
+    },
+    {
+      "hour": 12,
+      "n": 9292,
+      "mae": 33.13494053724897,
+      "ratio_to_overall": 1.0827254528709758,
+      "status": "PASS"
+    },
+    {
+      "hour": 11,
+      "n": 10647,
+      "mae": 29.04950328947002,
+      "ratio_to_overall": 0.9492287022338408,
+      "status": "PASS"
+    },
+    {
+      "hour": 10,
+      "n": 11784,
+      "mae": 27.744854335367844,
+      "ratio_to_overall": 0.9065976726691443,
+      "status": "PASS"
+    },
+    {
+      "hour": 21,
+      "n": 5599,
+      "mae": 25.64541467399664,
+      "ratio_to_overall": 0.8379958668026729,
+      "status": "PASS"
+    },
+    {
+      "hour": 9,
+      "n": 12537,
+      "mae": 25.36000478140043,
+      "ratio_to_overall": 0.8286697430733214,
+      "status": "PASS"
+    },
+    {
+      "hour": 8,
+      "n": 13615,
+      "mae": 20.84980918741637,
+      "ratio_to_overall": 0.6812934844214172,
+      "status": "PASS"
+    },
+    {
+      "hour": 7,
+      "n": 11646,
+      "mae": 18.44551950976584,
+      "ratio_to_overall": 0.6027303245708424,
+      "status": "PASS"
+    },
+    {
+      "hour": 6,
+      "n": 6958,
+      "mae": 15.076102262024481,
+      "ratio_to_overall": 0.49263041926481266,
+      "status": "PASS"
+    },
+    {
+      "hour": 5,
+      "n": 2467,
+      "mae": 11.710565640331584,
+      "ratio_to_overall": 0.3826573182483822,
+      "status": "PASS"
+    }
+  ],
+  "has_prev_bus_slices": [
+    {
+      "has_prev_bus": 0,
+      "n": 5788,
+      "mae": 51.19773363372358,
+      "ratio_to_overall": 1.6729497151873651,
+      "status": "PASS"
+    },
+    {
+      "has_prev_bus": 1,
+      "n": 147917,
+      "mae": 29.79740867358262,
+      "ratio_to_overall": 0.9736674422040434,
+      "status": "PASS"
+    }
+  ],
+  "model_artifact": {
+    "file": "lightgbm_l1.joblib",
+    "size_mb": 66.79829597473145,
+    "max_model_size_mb": 100.0,
+    "passed": true
+  },
+  "inference_latency": {
+    "median_ms": 15.70179994450882,
+    "p95_ms": 17.996340041281655,
+    "min_ms": 14.794899965636432,
+    "threshold_ms": 50.0,
+    "passed": true,
+    "measurement_method": "30-iteration warm single-row inference timing via time.perf_counter()"
+  },
+  "prediction_sanity": {
+    "passed": true,
+    "sample_size": 200,
+    "no_nan": true,
+    "no_inf": true,
+    "all_positive": true,
+    "within_bounds": true,
+    "min_pred_s": 20.152830204196952,
+    "max_pred_s": 674.8648707856228
+  },
+  "failure_reasons": [],
+  "warnings": [
+    "Hour 4 has only 1 samples (< 100 threshold); marked as INSUFFICIENT_DATA and excluded from gate failure."
+  ]
 }
