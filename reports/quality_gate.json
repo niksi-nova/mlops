@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "best_model": "lightgbm_l1",
+  "best_baseline": "recent_buses_baseline",
+  "checks": {
+    "baseline_improvement": {
+      "metric": "improvement_pct_over_best_baseline",
+      "value": 19.928448101321898,
+      "threshold": 10.0,
+      "operator": ">=",
+      "passed": true
+    },
+    "max_test_mae": {
+      "metric": "test_mae_best_model",
+      "value": 30.603271077989092,
+      "threshold": 35.0,
+      "operator": "<=",
+      "passed": true
+    },
+    "generalisation_gap": {
+      "metric": "generalisation_gap_pct",
+      "value": 4.323889263459694,
+      "threshold": 10.0,
+      "operator": "<=",
+      "passed": true
+    },
+    "within_60s_accuracy": {
+      "metric": "within_60s_pct",
+      "value": 89.35298136039816,
+      "threshold": 85.0,
+      "operator": ">=",
+      "passed": true
+    }
+  }
+}

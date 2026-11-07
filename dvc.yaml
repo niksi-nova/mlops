@@ -88,3 +88,15 @@ stages:
           cache: false
     plots:
       - reports/figures/eval/
+
+  quality_gate:
+    cmd: uv run python -m src.models.quality_gate
+    deps:
+      - reports/test_metrics.json
+      - src/models/quality_gate.py
+      - src/models/tracking.py
+    params:
+      - quality_gate
+    metrics:
+      - reports/quality_gate.json:
+          cache: false

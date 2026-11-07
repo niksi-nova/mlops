@@ -10,8 +10,8 @@ stages:
       nfiles: 184
     - path: src/data/clean.py
       hash: md5
-      md5: bc09abf0ad3fbda519dc3b017c3ee795
-      size: 9644
+      md5: a151ad580d9f193d1c878492e3bbcb31
+      size: 9912
     params:
       params.yaml:
         clean:
@@ -24,8 +24,8 @@ stages:
       size: 2501077
     - path: reports/cleaning_report.json
       hash: md5
-      md5: cd5b190bf5fd7bcac7b0ca678fcd9f22
-      size: 511
+      md5: 274aadb1a076061f95fb420806ec2228
+      size: 533
   build_segments:
     cmd: uv run python -m src.data.build_segments
     deps:
@@ -35,8 +35,8 @@ stages:
       size: 2501077
     - path: src/data/build_segments.py
       hash: md5
-      md5: 71aebd1cf9fc4e9c71bda7f235679cc1
-      size: 4886
+      md5: 15ceb4a0db4cb06c680a0b998b37aa95
+      size: 5013
     params:
       params.yaml:
         segments:
@@ -49,8 +49,8 @@ stages:
       size: 5130200
     - path: reports/segments_report.json
       hash: md5
-      md5: 9fa2a59468270262327187626797279c
-      size: 773
+      md5: 3f07e31d3701c13b5feb33b56c521a63
+      size: 802
   validate:
     cmd: uv run python -m src.data.validate
     deps:
@@ -60,8 +60,8 @@ stages:
       size: 5130200
     - path: src/data/validate.py
       hash: md5
-      md5: d622839bac505b03f37d77599f89f2f5
-      size: 4665
+      md5: ccbb6e61bbfbf9e50d710812af3c8b40
+      size: 4803
     params:
       params.yaml:
         segments:
@@ -70,8 +70,8 @@ stages:
     outs:
     - path: reports/validation_report.json
       hash: md5
-      md5: a4a70e59c81d47f912eb690330ca82d6
-      size: 362
+      md5: 65c434b7f7dc4aee2e45da36705da7de
+      size: 376
   featurize:
     cmd: uv run python -m src.features.build_features
     deps:
@@ -81,16 +81,16 @@ stages:
       size: 5130200
     - path: reports/validation_report.json
       hash: md5
-      md5: a4a70e59c81d47f912eb690330ca82d6
-      size: 362
+      md5: 65c434b7f7dc4aee2e45da36705da7de
+      size: 376
     - path: src/features/build_features.py
       hash: md5
-      md5: c623cc3a0e02be4c17f50cbb6342a958
-      size: 19802
+      md5: 4d47cbec1dbff9b55a822218b9fdfc5a
+      size: 20290
     - path: src/features/time_features.py
       hash: md5
-      md5: a120dd6194b624131efd851fc4a89667
-      size: 3966
+      md5: 019e53da5f14e8a7c2bd6d711bc0b51b
+      size: 4068
     params:
       params.yaml:
         featurize:
@@ -116,24 +116,24 @@ stages:
     outs:
     - path: data/processed/feature_spec.json
       hash: md5
-      md5: 206a8ce9c2e658a6611f9d29a1a9c45f
-      size: 96217
+      md5: 56e0ba112ab339fd0fda679b8844ed85
+      size: 99726
     - path: data/processed/test.parquet
       hash: md5
-      md5: 15caa783acb776ed6c66fd2de0e62564
+      md5: d7a68d4b9a6c50297cf647bf64a0f027
       size: 2491232
     - path: data/processed/train.parquet
       hash: md5
-      md5: 77725a0717a4e3a9fd9896d2a331b523
-      size: 9612028
+      md5: 1468a1796f924c330013b625b5ccd3e0
+      size: 9611039
     - path: data/processed/val.parquet
       hash: md5
-      md5: 9ab6421b715102302378162c61105b31
-      size: 2252264
+      md5: 555c3179cbf2696b8dfa84c787fab9ff
+      size: 2252259
     - path: reports/featurize_report.json
       hash: md5
-      md5: 861a119ac618af307d9284525453a068
-      size: 1381
+      md5: 20901cb12acf8619828fb084ab6318b2
+      size: 1433
   train:
     cmd: uv run python -m src.models.train
     deps:
@@ -295,3 +295,30 @@ stages:
       hash: md5
       md5: 0a1a3a2989a0ae0ea5548f2aa0e09082
       size: 9807
+  quality_gate:
+    cmd: uv run python -m src.models.quality_gate
+    deps:
+    - path: reports/test_metrics.json
+      hash: md5
+      md5: 8580a5681bf4c001ed4dbcbb635b2ae5
+      size: 10261
+    - path: src/models/quality_gate.py
+      hash: md5
+      md5: 22086fca946364d0bf9b6378c97fb2f7
+      size: 5350
+    - path: src/models/tracking.py
+      hash: md5
+      md5: 515d1ac610672891abc55fda3e879648
+      size: 6020
+    params:
+      params.yaml:
+        quality_gate:
+          min_improvement_pct_over_baseline: 10.0
+          max_test_mae: 35.0
+          max_generalisation_gap_pct: 10.0
+          min_within_60s_pct: 85.0
+    outs:
+    - path: reports/quality_gate.json
+      hash: md5
+      md5: 9a5df93e7c675526afaf703aca340c1f
+      size: 871
