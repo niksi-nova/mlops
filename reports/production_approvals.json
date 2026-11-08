@@ -1,11 +1,1 @@
-[
-  {
-    "status": "APPROVED",
-    "approved_by": "Prof. Smith",
-    "timestamp": "2026-11-07T16:49:55.358818+00:00",
-    "reason": "Approved after review",
-    "confirmation_phrase": "PROMOTE lightgbm_l1 v1 TO PRODUCTION",
-    "previous_production_version": null,
-    "promoted_version": "v1"
-  }
-]
+[]

@@ -34,6 +34,24 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 os.environ["WANDB_MODE"] = "disabled"
 
 
+@pytest.fixture(autouse=True)
+def isolate_approval_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    """Isolate approval history reads and writes to a temporary path for every test.
+
+    Guarantees that test executions (even those exercising interactive promotion)
+    never read or modify the real tracked reports/production_approvals.json file.
+    """
+    import src.models.registry as registry_module
+
+    temporary_path = tmp_path / "production_approvals.json"
+    temporary_path.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(
+        registry_module,
+        "APPROVALS_HISTORY_PATH",
+        temporary_path,
+    )
+
+
 @pytest.fixture
 def dummy_spec(tmp_path: Path) -> dict[str, Any]:
     spec = {
@@ -275,14 +293,14 @@ def test_promote_to_production_succeeds_with_correct_confirmation(tmp_path: Path
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda prompt="": "PROMOTE lightgbm_l1 v1 TO PRODUCTION")
 
-    updated = promote_to_production(approved_by="Prof. Smith", reason="Approved after review")
+    updated = promote_to_production(approved_by="Authorized Lead", reason="Approved after review")
 
     assert updated["active_aliases"]["production"] == "v1"
     assert "production" in updated["assigned_aliases"]
     assert len(updated["production_approval_history"]) == 1
     approval = updated["production_approval_history"][0]
     assert approval["status"] == "APPROVED"
-    assert approval["approved_by"] == "Prof. Smith"
+    assert approval["approved_by"] == "Authorized Lead"
     assert approval["confirmation_phrase"] == "PROMOTE lightgbm_l1 v1 TO PRODUCTION"
 
 
@@ -343,3 +361,48 @@ def test_prediction_equivalence_and_wrapper_contract():
     np.testing.assert_array_equal(preds_wrapper, preds_direct)
     assert len(preds_wrapper) == 5
     assert not np.isnan(preds_wrapper).any()
+
+
+def test_real_tracked_approval_file_remains_unchanged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Regression test proving that real tracked approval reports are never modified during tests."""
+    from src.models.registry import APPROVALS_HISTORY_PATH
+
+    real_approvals_path = PROJECT_ROOT / "reports" / "production_approvals.json"
+    real_approvals_content = real_approvals_path.read_text(encoding="utf-8") if real_approvals_path.exists() else None
+
+    real_registry_path = PROJECT_ROOT / "reports" / "model_registry.json"
+    real_registry_content = real_registry_path.read_text(encoding="utf-8") if real_registry_path.exists() else None
+
+    # Simulate an interactive promotion attempt in test environment
+    fake_report = tmp_path / "model_registry.json"
+    fake_report.write_text(
+        json.dumps({
+            "mode": "local_fallback",
+            "model_id": "lightgbm_l1",
+            "artifact_version": "v1",
+            "assigned_aliases": ["candidate", "staging", "latest"],
+            "active_aliases": {"candidate": "v1", "staging": "v1", "latest": "v1"},
+            "quality_gate_passed": True,
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", fake_report)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "PROMOTE lightgbm_l1 v1 TO PRODUCTION")
+
+    # Run promotion inside test
+    promote_to_production(approved_by="Test Human", reason="Regression test for path isolation")
+
+    # The temporary isolated file must receive the update
+    temp_approvals = json.loads(APPROVALS_HISTORY_PATH.read_text(encoding="utf-8"))
+    assert len(temp_approvals) == 1
+    assert temp_approvals[0]["approved_by"] == "Test Human"
+
+    # The real tracked approval files must be byte-for-byte unchanged
+    if real_approvals_content is not None:
+        assert real_approvals_path.read_text(encoding="utf-8") == real_approvals_content
+    else:
+        assert not real_approvals_path.exists()
+
+    if real_registry_content is not None:
+        assert real_registry_path.read_text(encoding="utf-8") == real_registry_content
