@@ -37,7 +37,11 @@ def ensure_wandb_login() -> bool:
     already set WANDB_MODE explicitly (e.g. to "disabled" for tests) - fall
     back to WANDB_MODE=offline and print a warning. Returns True if logged
     in."""
-    logged_in = bool(wandb.login(timeout=0))
+    try:
+        logged_in = bool(wandb.login(timeout=0))
+    except Exception:
+        logged_in = False
+
     if not logged_in and "WANDB_MODE" not in os.environ:
         os.environ["WANDB_MODE"] = "offline"
         print(
@@ -144,11 +148,20 @@ def start_run(name: str, job_type: str, config: dict[str, Any], group: str | Non
     ensure_wandb_login()
     params = load_params()
     full_config = {**config, **lineage_config()}
-    return wandb.init(
-        project=params["train"]["wandb_project"],
-        name=name,
-        job_type=job_type,
-        group=group,
-        tags=tags,
-        config=full_config,
-    )
+    kwargs = {
+        "project": params["train"]["wandb_project"],
+        "name": name,
+        "job_type": job_type,
+        "group": group,
+        "tags": tags,
+        "config": full_config,
+    }
+    mode = os.environ.get("WANDB_MODE")
+    if mode:
+        kwargs["mode"] = mode
+    try:
+        return wandb.init(**kwargs)
+    except Exception as exc:
+        print(f"WARNING: wandb.init failed ({exc}); falling back to mode='disabled'.")
+        os.environ["WANDB_MODE"] = "disabled"
+        return wandb.init(mode="disabled")

@@ -88,3 +88,29 @@ stages:
           cache: false
     plots:
       - reports/figures/eval/
+
+  quality_gate:
+    cmd: uv run python -m src.models.quality_gate
+    deps:
+      - reports/test_metrics.json
+      - reports/train_metrics.json
+      - models/lightgbm_l1.joblib
+      - src/models/quality_gate.py
+      - src/models/tracking.py
+    params:
+      - quality_gate
+      - segments
+    metrics:
+      - reports/quality_gate.json:
+          cache: false
+
+  register:
+    cmd: uv run python -m src.models.registry
+    deps:
+      - reports/quality_gate.json
+      - models/lightgbm_l1.joblib
+      - data/processed/feature_spec.json
+      - src/models/registry.py
+    metrics:
+      - reports/model_registry.json:
+          cache: false

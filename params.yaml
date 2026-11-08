@@ -56,3 +56,14 @@ featurize:
   recent_window_minutes: 30
   te_folds: 5
   rare_vehicle_min_count: 500
+
+quality_gate:
+  min_improvement_pct_over_baseline: 10.0
+  max_test_mae: 35.0
+  max_generalisation_gap_pct: 10.0
+  min_within_60s_pct: 85.0
+  max_inference_latency_ms: 50.0
+  max_model_size_mb: 100.0
+  min_slice_samples: 100
+  max_slice_mae_ratio: 1.8
+  max_prev_bus_drop_s: 15.0

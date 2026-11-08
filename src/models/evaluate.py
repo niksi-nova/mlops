@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -38,7 +39,7 @@ from src.models.train import (
     prep_lightgbm_features,
     regression_metrics,
 )
-from src.models.tracking import lineage_config, load_params
+from src.models.tracking import ensure_wandb_login, lineage_config, load_params
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
@@ -377,35 +378,47 @@ def main() -> int:
     print(f"Wrote {REPORT_PATH.relative_to(PROJECT_ROOT)}")
 
     # --- e. W&B run ----------------------------------------------------------
-    run = wandb.init(
-        project=train_params["wandb_project"],
-        name="final-evaluation-test",
-        job_type="evaluate",
-        config=lineage_config(),
-    )
-    run.use_artifact(f"delhi-{best_model_name}:latest", type="model")
+    ensure_wandb_login()
+    eval_kwargs = {
+        "project": train_params["wandb_project"],
+        "name": "final-evaluation-test",
+        "job_type": "evaluate",
+        "config": lineage_config(),
+    }
+    mode = os.environ.get("WANDB_MODE")
+    if mode:
+        eval_kwargs["mode"] = mode
 
-    run.summary.update(
-        {
-            "best_model": best_model_name,
-            "best_baseline": best_baseline_name,
-            "test_mae_best_model": test_mae_best,
-            "val_mae_best_model": val_mae_best,
-            "generalisation_gap_pct": generalisation_gap_pct,
-            "improvement_pct_over_best_baseline": improvement_pct_over_best_baseline,
-            "improvement_pct_over_global_median": improvement_pct_over_global_median,
-            "target_met": target_met,
-            **{f"test_{name}_mae": results[name]["mae"] for name in results},
-        }
-    )
+    try:
+        run = wandb.init(**eval_kwargs)
+        try:
+            run.use_artifact(f"delhi-{best_model_name}:latest", type="model")
+        except Exception:
+            pass
 
-    for fig_path in sorted(FIG_DIR.glob("*.png")):
-        wandb.log({fig_path.stem: wandb.Image(str(fig_path))})
+        run.summary.update(
+            {
+                "best_model": best_model_name,
+                "best_baseline": best_baseline_name,
+                "test_mae_best_model": test_mae_best,
+                "val_mae_best_model": val_mae_best,
+                "generalisation_gap_pct": generalisation_gap_pct,
+                "improvement_pct_over_best_baseline": improvement_pct_over_best_baseline,
+                "improvement_pct_over_global_median": improvement_pct_over_global_median,
+                "target_met": target_met,
+                **{f"test_{name}_mae": results[name]["mae"] for name in results},
+            }
+        )
 
-    wandb.log({"mae_by_hour": wandb.Table(dataframe=mae_by_hour_df)})
-    wandb.log({"daily_mae": wandb.Table(dataframe=daily_mae_df)})
+        for fig_path in sorted(FIG_DIR.glob("*.png")):
+            wandb.log({fig_path.stem: wandb.Image(str(fig_path))})
 
-    run.finish()
+        wandb.log({"mae_by_hour": wandb.Table(dataframe=mae_by_hour_df)})
+        wandb.log({"daily_mae": wandb.Table(dataframe=daily_mae_df)})
+
+        run.finish()
+    except Exception as e:
+        print(f"Notice: W&B final evaluation logging skipped: {e}")
 
     return 0
 
