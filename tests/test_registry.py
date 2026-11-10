@@ -87,6 +87,7 @@ def test_load_model_from_direct_path(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert loaded.alias == "custom_path"
 
 
+@pytest.mark.needs_data
 def test_load_model_staging_succeeds():
     """Verify load_model('staging') loads the quality-gate-approved staging model."""
     loaded = load_model("staging")
@@ -345,6 +346,7 @@ def test_normal_dvc_pipeline_cannot_promote_production(tmp_path: Path, monkeypat
     assert record["production_auto_promoted"] is False
 
 
+@pytest.mark.needs_data
 def test_prediction_equivalence_and_wrapper_contract():
     """Verify loaded staging ProductionModel wraps predictions faithfully and exposes expected properties."""
     from src.models.evaluate import predict as real_predict
