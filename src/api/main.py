@@ -12,13 +12,17 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.api.model_service import model_service
 from src.api.schemas import BatchRequest, BatchResponse, PredictionRequest, PredictionResponse
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("delhi_bus_delay_api")
@@ -53,6 +57,46 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def _page(filename: str) -> FileResponse:
+    # max-age is generous since the build script re-runs (and the image
+    # rebuilds) on every deploy; a stale cache just means an old snapshot,
+    # never broken content.
+    return FileResponse(STATIC_DIR / filename, headers={"Cache-Control": "public, max-age=300"})
+
+
+@app.get("/", include_in_schema=False)
+async def page_counter():
+    return _page("index.html")
+
+
+@app.get("/trip", include_in_schema=False)
+async def page_trip():
+    return _page("trip.html")
+
+
+@app.get("/data", include_in_schema=False)
+async def page_data():
+    return _page("data.html")
+
+
+@app.get("/models", include_in_schema=False)
+async def page_models():
+    return _page("models.html")
+
+
+@app.get("/pipeline", include_in_schema=False)
+async def page_pipeline():
+    return _page("pipeline.html")
+
+
+@app.get("/about", include_in_schema=False)
+async def page_about():
+    return _page("about.html")
 
 
 @app.middleware("http")
