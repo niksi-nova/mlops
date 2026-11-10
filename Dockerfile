@@ -32,7 +32,11 @@ USER app
 
 ENV MODEL_ALIAS=production \
     PORT=8000 \
-    MPLCONFIGDIR=/tmp/matplotlib
+    MPLCONFIGDIR=/tmp/matplotlib \
+    HOME=/tmp \
+    WANDB_DIR=/tmp/wandb \
+    WANDB_CACHE_DIR=/tmp/wandb/cache \
+    WANDB_CONFIG_DIR=/tmp/wandb/config
 
 EXPOSE 8000
 

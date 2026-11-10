@@ -65,6 +65,18 @@ def dummy_spec(tmp_path: Path) -> dict[str, Any]:
 
 
 @pytest.fixture
+def dummy_spec_path(tmp_path: Path) -> Path:
+    spec = {
+        "features": ["feat1", "cat1"],
+        "numeric_features": ["feat1"],
+        "categorical_features": ["cat1"],
+    }
+    spec_path = tmp_path / "feature_spec_for_production_tests.json"
+    spec_path.write_text(json.dumps(spec))
+    return spec_path
+
+
+@pytest.fixture
 def dummy_model_path(tmp_path: Path) -> Path:
     dummy_model = GlobalMedianRegressor()
     model_path = tmp_path / "lightgbm_l1.joblib"
@@ -97,8 +109,11 @@ def test_load_model_staging_succeeds():
     assert loaded.expected_feature_columns == loaded.categorical_features + loaded.numeric_features
 
 
-def test_load_model_production_raises_error_when_unassigned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_load_model_production_raises_error_when_unassigned(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
+):
     """Verify load_model('production') strictly fails when production is not actively approved."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
     fake_report = tmp_path / "model_registry.json"
     unassigned_record = {
         "mode": "local_fallback",
@@ -115,8 +130,11 @@ def test_load_model_production_raises_error_when_unassigned(tmp_path: Path, monk
         load_model("production")
 
 
-def test_invalidated_approval_history_cannot_activate_production(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_invalidated_approval_history_cannot_activate_production(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
+):
     """Verify that a historical approval marked INVALIDATED cannot be loaded as production."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
     fake_report = tmp_path / "model_registry.json"
     invalidated_record = {
         "mode": "local_fallback",
@@ -139,6 +157,141 @@ def test_invalidated_approval_history_cannot_activate_production(tmp_path: Path,
     monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", fake_report)
 
     with pytest.raises(RuntimeError, match="has been INVALIDATED and is not authorized"):
+        load_model("production")
+
+
+def _approved_production_report(tmp_path: Path) -> Path:
+    """A model_registry.json with a valid, non-invalidated production approval for v1."""
+    fake_report = tmp_path / "model_registry.json"
+    fake_report.write_text(
+        json.dumps(
+            {
+                "model_id": "lightgbm_l1",
+                "active_aliases": {"candidate": "v1", "staging": "v1", "production": "v1"},
+                "production_approval_history": [
+                    {
+                        "status": "APPROVED",
+                        "approved_by": "Test Approver",
+                        "promoted_version": "v1",
+                    }
+                ],
+            }
+        )
+    )
+    return fake_report
+
+
+def test_load_model_production_prefers_local_over_remote(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path, dummy_model_path: Path
+):
+    """When a local models/lightgbm_l1.joblib exists, production must load it
+    locally and never call the remote W&B fallback at all."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", _approved_production_report(tmp_path))
+    monkeypatch.setattr("src.models.registry.MODELS_DIR", tmp_path)
+    monkeypatch.setattr("src.models.registry.BEST_MODEL_PATH", tmp_path / "best_model.joblib")
+
+    def _fail_if_called(*_args, **_kwargs):
+        raise AssertionError("remote W&B fallback must not be called when a local file exists")
+
+    monkeypatch.setattr("src.models.registry._fetch_wandb_artifact_joblib", _fail_if_called)
+
+    loaded = load_model("production")
+    assert loaded.alias == "production"
+    assert loaded.version == "v1"
+    assert loaded.source == "local"
+
+
+def test_load_model_production_falls_back_to_remote_when_no_local_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
+):
+    """When no local copy exists, production falls back to the same remote
+    W&B artifact lookup candidate/latest use, after authorization already passed."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", _approved_production_report(tmp_path))
+    monkeypatch.setattr("src.models.registry.MODELS_DIR", tmp_path / "no_models_here")
+    monkeypatch.setattr("src.models.registry.BEST_MODEL_PATH", tmp_path / "no_models_here" / "best_model.joblib")
+
+    remote_model_path = tmp_path / "remote_lightgbm_l1.joblib"
+    joblib.dump(GlobalMedianRegressor(), remote_model_path)
+
+    def _fake_fetch(alias, workspace, project, collection=DEFAULT_COLLECTION):
+        assert alias == "production"
+        return remote_model_path, "v0"
+
+    monkeypatch.setattr("src.models.registry._fetch_wandb_artifact_joblib", _fake_fetch)
+
+    loaded = load_model("production")
+    assert loaded.alias == "production"
+    # Version reported is the locally-approved version, not the remote
+    # artifact's own version string - the approval is what's authoritative.
+    assert loaded.version == "v1"
+    assert loaded.source == "wandb"
+    assert isinstance(loaded.model, GlobalMedianRegressor)
+
+
+def test_fetch_wandb_artifact_refuses_when_alias_missing_on_artifact(monkeypatch: pytest.MonkeyPatch):
+    """The remote fetch helper must refuse (return None, not raise) if the
+    artifact it found doesn't actually carry the alias that was requested."""
+    from src.models.registry import _fetch_wandb_artifact_joblib
+
+    class FakeArtifact:
+        aliases = ["candidate", "staging"]  # deliberately missing "production"
+
+        def download(self, root=None):
+            raise AssertionError("download must not be attempted when the alias check fails")
+
+    class FakeApi:
+        def artifact(self, path):
+            return FakeArtifact()
+
+    monkeypatch.setattr("src.models.registry.ensure_wandb_login", lambda: True)
+    monkeypatch.setattr("src.models.registry.wandb.Api", FakeApi)
+
+    result = _fetch_wandb_artifact_joblib("production", "workspace", "project")
+    assert result is None
+
+
+def test_load_model_production_raises_clear_error_when_remote_also_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
+):
+    """No local copy and no usable remote artifact -> a clear FileNotFoundError,
+    not a silent fallback to staging/candidate or some other alias."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", _approved_production_report(tmp_path))
+    monkeypatch.setattr("src.models.registry.MODELS_DIR", tmp_path / "no_models_here")
+    monkeypatch.setattr("src.models.registry.BEST_MODEL_PATH", tmp_path / "no_models_here" / "best_model.joblib")
+    monkeypatch.setattr("src.models.registry._fetch_wandb_artifact_joblib", lambda *a, **k: None)
+
+    with pytest.raises(FileNotFoundError, match="not found on disk .* or in the W&B registry"):
+        load_model("production")
+
+
+def test_load_model_production_without_approval_never_reaches_remote_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
+):
+    """Production without any approval record must refuse before even
+    attempting the remote fallback - the remote path must never be reached
+    when governance hasn't authorized this version."""
+    monkeypatch.setattr("src.models.registry.FEATURE_SPEC_PATH", dummy_spec_path)
+    fake_report = tmp_path / "model_registry.json"
+    fake_report.write_text(
+        json.dumps(
+            {
+                "model_id": "lightgbm_l1",
+                "active_aliases": {"candidate": "v1", "staging": "v1"},  # no "production" key
+                "production_approval_history": [],
+            }
+        )
+    )
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", fake_report)
+
+    def _fail_if_called(*_args, **_kwargs):
+        raise AssertionError("remote fallback must never be attempted without an active production approval")
+
+    monkeypatch.setattr("src.models.registry._fetch_wandb_artifact_joblib", _fail_if_called)
+
+    with pytest.raises(RuntimeError, match="No model is currently assigned to the 'production' alias"):
         load_model("production")
 
 

@@ -165,6 +165,7 @@ def test_predict_batch_over_limit_returns_422(client):
 
 
 @pytest.mark.integration
+@pytest.mark.needs_data  # load_model() always needs a real data/processed/feature_spec.json on disk
 @pytest.mark.skipif(
     not (os.environ.get("WANDB_API_KEY") or os.environ.get("MODEL_PATH")),
     reason="requires WANDB_API_KEY or MODEL_PATH to load the real production model",
