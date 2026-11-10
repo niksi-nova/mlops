@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counter — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="paperGrain">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="noise" seed="7"/>
+    <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.02 0"/>
+    <feComposite operator="over" in2="SourceGraphic"/>
+  </filter>
+</svg>
+
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Counter — how long to the next stop?</h1>
+  <p class="muted">Pick a route, a segment and a time of day. Everything else is filled in from real medians for that segment and hour — this is exactly what <code>/predict</code> sees. Only routes 425 and 534 are in this dataset (the only two in the training data), so there's no "top 20" to pick from.</p>
+
+  <div class="panel">
+    <h2>1. Presets</h2>
+    <p class="chart-caption">Six real rows from the test set, each a different kind of segment/time.</p>
+    <div class="toggle-group" id="preset-buttons" role="group" aria-label="Presets"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>2. Pick a segment</h2>
+      <div class="field">
+        <label for="route-select">Route</label>
+        <select id="route-select"></select>
+      </div>
+      <div class="field">
+        <label for="direction-select">Direction</label>
+        <select id="direction-select"></select>
+      </div>
+      <p class="chart-caption">Click a stop pair on the line below to choose the segment.</p>
+      <div class="route-line-wrap">
+        <svg id="route-line-svg" class="route-line" width="100%" height="90" role="img" aria-label="Route line, click a segment"></svg>
+      </div>
+      <p id="segment-readout" class="num muted"></p>
+    </div>
+
+    <div class="panel">
+      <h2>3. Time and conditions</h2>
+      <div class="field">
+        <label for="minute-slider">Time of day: <span id="minute-readout" class="num"></span></label>
+        <input type="range" id="minute-slider" min="0" max="1439" value="480" step="5" style="width:100%">
+      </div>
+      <div class="field">
+        <label for="weekday-select">Relative weekday</label>
+        <select id="weekday-select">
+          <option value="0">0</option><option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option>
+        </select>
+      </div>
+      <fieldset style="border: var(--rule); padding: 10px; margin: 0;">
+        <legend class="num" style="font-size:0.75rem;">real-time inputs (defaults from the segment/hour median)</legend>
+        <div class="field"><label for="prev-bus-tt">Previous bus's travel time (s)</label><input type="number" id="prev-bus-tt" step="1"></div>
+        <div class="field"><label for="prev3-median-tt">Median of previous 3 buses (s)</label><input type="number" id="prev3-median-tt" step="1"></div>
+        <div class="field"><label for="headway">Headway since previous bus (s)</label><input type="number" id="headway" step="1"></div>
+        <div class="field"><label for="n-buses-recent">Buses in the recent window</label><input type="number" id="n-buses-recent" step="1"></div>
+        <div class="field">
+          <label for="has-prev-bus">Has a previous bus?</label>
+          <div class="toggle-group" id="has-prev-bus-toggle" role="group" aria-label="Has previous bus">
+            <button type="button" data-val="1" aria-pressed="true">yes</button>
+            <button type="button" data-val="0" aria-pressed="false">no (cold start)</button>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+
+  <div class="panel">
+    <button id="predict-btn" type="button">Punch the ticket →</button>
+    <span id="predict-error" class="error-banner" style="display:none" role="alert"></span>
+  </div>
+
+  <div id="result-area" class="grid-2" style="display:none">
+    <div>
+      <div class="ticket" id="ticket" aria-live="polite">
+        <div class="hole"></div>
+        <div class="serial">SERIAL <span id="ticket-serial"></span></div>
+        <div style="margin-top:10px;">ADMIT ONE SEGMENT</div>
+        <div class="big-number"><span id="ticket-seconds">—</span><span class="unit"> s</span></div>
+        <div id="ticket-stamp" class="stamp" style="display:none">ON TIME</div>
+        <div class="num" style="margin-top:14px; font-size:0.78rem;" id="ticket-meta"></div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h3>The ruler</h3>
+        <div class="ruler">
+          <div class="ruler-track" id="ruler-track"></div>
+        </div>
+        <p class="ruler-note" id="ruler-note"></p>
+      </div>
+      <details class="data-table-toggle">
+        <summary>request and response JSON</summary>
+        <pre id="req-res-json" class="num" style="white-space:pre-wrap; font-size:0.72rem;"></pre>
+      </details>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/time_features.js"></script>
+<script src="/static/js/counter.js"></script>
+</body>
+</html>

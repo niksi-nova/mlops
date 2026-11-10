@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Models — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Models — seven candidates, one winner</h1>
+  <p id="models-summary" class="muted"></p>
+
+  <div class="panel">
+    <h2>Validation vs test MAE, by model</h2>
+    <div id="mae-chart"></div>
+    <p class="chart-caption">Lower is better. The gap between val and test bars is the generalization/drift check.</p>
+    <details class="data-table-toggle"><summary>view data table</summary><div id="mae-table"></div></details>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Feature importance (gain)</h2>
+      <div id="importance-chart"></div>
+      <p class="chart-caption">Top 20 features for the winning model, coloured by group: real-time, historical, time-of-day, position.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="importance-table"></div></details>
+    </div>
+    <div class="panel">
+      <h2>Predicted vs actual (test sample)</h2>
+      <canvas id="scatter-canvas" style="width:100%"></canvas>
+      <p class="chart-caption">2000-point sample. Points near the dashed y=x line are accurate predictions.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="scatter-table"></div></details>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Residuals</h2>
+      <div id="residual-chart"></div>
+      <p class="chart-caption">predicted − actual, in seconds. Centred near zero with a fairly symmetric spread is a good sign.</p>
+    </div>
+    <div class="panel">
+      <h2>MAE by hour / by has_prev_bus</h2>
+      <div id="mae-hour-chart"></div>
+      <p class="chart-caption">From the quality gate's slice checks - cold-start rows (no previous bus) are harder to predict.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="mae-hour-table"></div></details>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/models_page.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Data — what's actually in here</h1>
+  <p class="muted">Delhi public bus GPS/stop-event data, two routes (425, 534), both directions. See the <a href="/docs">dataset card</a> on GitHub for the full write-up.</p>
+
+  <div class="panel">
+    <h2>Cleaning and validation</h2>
+    <p id="cleaning-summary"></p>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Segment travel time distribution</h2>
+      <div id="hist-chart"></div>
+      <p class="chart-caption">log(1+travel_time_s), clipped at the 99th percentile - most segments take under a few minutes, with a long tail.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="hist-table"></div></details>
+    </div>
+    <div class="panel">
+      <h2>Median travel time by hour</h2>
+      <div id="hourly-chart"></div>
+      <p class="chart-caption">Median with 25th-75th percentile band, by hour of day.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="hourly-table"></div></details>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Median travel time: hour × weekday</h2>
+      <div id="heatmap-chart"></div>
+      <p class="chart-caption">Darker = slower. Rows are relative_weekday (0-6), columns are hour.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="heatmap-table"></div></details>
+    </div>
+    <div class="panel">
+      <h2>Travel time vs headway</h2>
+      <div id="headway-chart"></div>
+      <p class="chart-caption">Binned medians: longer gaps since the previous bus tend to mean a slower, more crowded trip.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="headway-table"></div></details>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Previous bus vs this bus</h2>
+      <div id="prevown-chart"></div>
+      <p class="chart-caption">Binned medians: a slow previous bus is a strong signal the next one will be slow too.</p>
+      <details class="data-table-toggle"><summary>view data table</summary><div id="prevown-table"></div></details>
+    </div>
+    <div class="panel">
+      <h2>Train / validation / test split</h2>
+      <div id="split-chart"></div>
+      <p class="chart-caption">Split by day_index, not randomly - a trip never crosses a split boundary.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Limitations</h2>
+    <ul>
+      <li>Only 2 routes (425, 534) - this is not a city-wide model.</li>
+      <li>No real vehicle GPS coordinates - only stop-sequence node indices.</li>
+      <li>No real calendar dates in the raw data, only relative day_index/weekday labels.</li>
+      <li>Real-time features (previous bus, headway) require a live feed this project doesn't build - see <a href="/about">About</a>.</li>
+    </ul>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/data_page.js"></script>
+</body>
+</html>

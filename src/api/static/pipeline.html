@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Pipeline — how this got here</h1>
+  <p class="muted">Click a station for what it does, the tool, the file/command, and one real number.</p>
+
+  <div class="panel">
+    <h2>Phase 1 — data to model</h2>
+    <svg id="phase1-track" class="pipeline-track" width="100%" height="110" role="img" aria-label="Phase 1 stations"></svg>
+  </div>
+  <div class="panel">
+    <h2>Phase 2 — serving and ops (this repo)</h2>
+    <svg id="phase2-track" class="pipeline-track" width="100%" height="110" role="img" aria-label="Phase 2 stations"></svg>
+  </div>
+  <div class="panel">
+    <h2>Phase 3 — planned</h2>
+    <svg id="phase3-track" class="pipeline-track" width="100%" height="110" role="img" aria-label="Phase 3 stations (planned)"></svg>
+  </div>
+
+  <div id="station-detail" class="panel" style="display:none" role="region" aria-live="polite">
+    <h3 id="station-title"></h3>
+    <p id="station-desc"></p>
+    <p class="num"><strong>Tool:</strong> <span id="station-tool"></span></p>
+    <p class="num"><strong>File/command:</strong> <code id="station-file"></code></p>
+    <p class="num"><strong>Real number:</strong> <span id="station-number"></span></p>
+  </div>
+
+  <div class="grid-2">
+    <div class="panel">
+      <h2>Model passport</h2>
+      <dl class="passport" id="passport"></dl>
+    </div>
+    <div class="panel">
+      <h2>Quality gate</h2>
+      <table style="width:100%; font-family: var(--font-num); font-size:0.82rem;">
+        <thead><tr><th style="text-align:left">check</th><th>threshold</th><th>value</th><th></th></tr></thead>
+        <tbody id="gate-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>CI/CD status</h2>
+    <p>
+      <img src="https://github.com/niksi-nova/mlops/actions/workflows/ci.yml/badge.svg" alt="CI status"
+           onerror="this.style.display='none'; document.getElementById('ci-fallback').style.display='inline';">
+      <span id="ci-fallback" style="display:none">CI badge unavailable (offline) — see <a href="https://github.com/niksi-nova/mlops/actions">github.com/niksi-nova/mlops/actions</a>.</span>
+      <img src="https://github.com/niksi-nova/mlops/actions/workflows/cd.yml/badge.svg" alt="CD status"
+           onerror="this.style.display='none';">
+    </p>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/pipeline_page.js"></script>
+</body>
+</html>
