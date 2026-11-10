@@ -1,0 +1,207 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "phase2-*"
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Minimal set of DVC-tracked paths the test suite and quality gate
+  # actually touch. A full `dvc pull` would also fetch models/random_forest.joblib
+  # (~610MB, an unused baseline artifact) on top of ~80MB of real need - see
+  # docs/ci_cd.md for the full explanation.
+  DVC_PULL_TARGETS: >-
+    data/processed/feature_spec.json
+    data/processed/train.parquet
+    data/processed/val.parquet
+    data/processed/test.parquet
+    models/lightgbm_l1.joblib
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0 # no moving major tag exists past v7; pin exact version
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Configure DVC remote credentials
+        env:
+          DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          uv run dvc remote modify --local origin access_key_id "$DAGSHUB_USER"
+          uv run dvc remote modify --local origin secret_access_key "$DAGSHUB_TOKEN"
+
+      - name: Pull data needed for tests
+        id: dvc_pull
+        continue-on-error: true
+        run: |
+          # shellcheck disable=SC2086  # intentional word-splitting: DVC_PULL_TARGETS is a space-separated list
+          uv run dvc pull $DVC_PULL_TARGETS
+
+      - name: Run full test suite (data available)
+        if: steps.dvc_pull.outcome == 'success'
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+          WANDB_BASE_URL: ${{ secrets.WANDB_BASE_URL }}
+        run: uv run pytest -q
+
+      - name: Run data-independent tests only (DVC pull failed or was skipped)
+        if: steps.dvc_pull.outcome != 'success'
+        env:
+          WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+          WANDB_BASE_URL: ${{ secrets.WANDB_BASE_URL }}
+        run: |
+          echo "::warning::DVC pull failed; skipping tests marked 'needs_data' (see docs/ci_cd.md)"
+          uv run pytest -q -m "not needs_data"
+
+  quality-gate:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Configure DVC remote credentials
+        env:
+          DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          uv run dvc remote modify --local origin access_key_id "$DAGSHUB_USER"
+          uv run dvc remote modify --local origin secret_access_key "$DAGSHUB_TOKEN"
+
+      - name: Pull data needed for the quality gate
+        run: |
+          # shellcheck disable=SC2086  # intentional word-splitting: DVC_PULL_TARGETS is a space-separated list
+          uv run dvc pull $DVC_PULL_TARGETS
+
+      - name: Run quality gate
+        run: uv run python -m src.models.quality_gate
+
+      - name: Upload quality gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-report
+          path: reports/quality_gate.json
+
+      - name: Check data/model integrity (dvc status)
+        run: |
+          output=$(uv run dvc status)
+          echo "$output"
+          # On this repo, plain `dvc status` is never fully empty: several
+          # report JSONs embed a fresh timestamp every run, and git checkout
+          # normalizes source file mtimes, so "modified" noise on deps/outs
+          # is expected and NOT a sign the pipeline is stale - see
+          # docs/ci_cd.md. What genuinely indicates a stale/broken pipeline
+          # is DVC reporting data it cannot find at all.
+          if echo "$output" | grep -qiE "not in cache|missing"; then
+            echo "::error::dvc status reports missing/not-in-cache data - pipeline is not reproducible as committed"
+            exit 1
+          fi
+
+  docker-smoke:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Configure DVC remote credentials
+        env:
+          DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          uv run dvc remote modify --local origin access_key_id "$DAGSHUB_USER"
+          uv run dvc remote modify --local origin secret_access_key "$DAGSHUB_TOKEN"
+
+      - name: Pull the trained model for local-file mode
+        run: uv run dvc pull data/processed/feature_spec.json models/lightgbm_l1.joblib
+
+      - name: Build image
+        run: docker build -t delhi-bus-delay-api:ci .
+
+      - name: Run container in local-file mode
+        run: |
+          docker run -d --name delhi-api-smoke \
+            -p 8000:8000 \
+            -v "$(pwd)/models:/app/model" \
+            -e MODEL_PATH=/app/model/lightgbm_l1.joblib \
+            delhi-bus-delay-api:ci
+
+      - name: Wait for healthcheck
+        run: |
+          for _ in $(seq 1 30); do
+            status=$(docker inspect --format='{{.State.Health.Status}}' delhi-api-smoke 2>/dev/null || echo "starting")
+            echo "health status: $status"
+            if [ "$status" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::container never became healthy"
+          docker logs delhi-api-smoke || true
+          exit 1
+
+      - name: Call /health and /predict
+        run: |
+          curl -sf http://127.0.0.1:8000/health
+          echo
+          response=$(curl -sf -X POST http://127.0.0.1:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"route": "425", "direction": "down", "segment_id": "425_down_26", "relative_weekday": 6, "from_node": 26, "nodes_spanned": 1, "route_position": 0.6341463414634146, "stops_into_trip": 1, "elapsed_trip_s": 0.0, "hour": 8, "minute_of_day": 484, "hour_sin": 0.8660254037844387, "hour_cos": -0.49999999999999983, "is_peak_am": 1, "is_peak_pm": 0, "prev_bus_tt_s": 30.0, "prev3_median_tt_s": 30.0, "headway_s": 52.0, "n_buses_recent": 3, "has_prev_bus": 1, "own_prev_segment_tt_s": 40.0, "own_prev_segment_ratio": 1.0, "typical_segment_hour_s": 40.0, "typical_segment_s": 40.0, "te_vehicle": 144.26669174404856}')
+          echo "$response"
+          pred=$(echo "$response" | python3 -c "import json,sys; print(json.load(sys.stdin)['predicted_travel_time_s'])")
+          python3 -c "
+          pred = float('$pred')
+          assert 0.0 <= pred <= 3600.0, f'prediction {pred} out of [0, 3600] range'
+          print(f'prediction OK: {pred}')
+          "
+
+      - name: Show container logs
+        if: always()
+        run: docker logs delhi-api-smoke || true
+
+      - name: Stop and remove container
+        if: always()
+        run: |
+          docker stop delhi-api-smoke || true
+          docker rm delhi-api-smoke || true
