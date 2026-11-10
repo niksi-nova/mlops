@@ -96,8 +96,20 @@ def test_load_model_staging_succeeds():
     assert loaded.expected_feature_columns == loaded.categorical_features + loaded.numeric_features
 
 
-def test_load_model_production_raises_error_when_unassigned():
+def test_load_model_production_raises_error_when_unassigned(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Verify load_model('production') strictly fails when production is not actively approved."""
+    fake_report = tmp_path / "model_registry.json"
+    unassigned_record = {
+        "mode": "local_fallback",
+        "model_id": "lightgbm_l1",
+        "artifact_version": "v1",
+        "assigned_aliases": ["candidate", "staging", "latest"],
+        "active_aliases": {"candidate": "v1", "staging": "v1", "latest": "v1"},
+        "production_approval_history": [],
+    }
+    fake_report.write_text(json.dumps(unassigned_record))
+    monkeypatch.setattr("src.models.registry.REGISTRY_REPORT_PATH", fake_report)
+
     with pytest.raises(RuntimeError, match="No model is currently assigned to the 'production' alias"):
         load_model("production")
 

@@ -54,3 +54,7 @@ wandb/
 /data/cache/
 tmp/
 .uv-cache/
+
+# Local model export for Docker's "baked in" MODEL_PATH mode
+# (scripts/export_production_model.py writes here)
+/model_export/
