@@ -36,8 +36,10 @@ async def lifespan(app: FastAPI):
     try:
         model_service.load()
         logger.info('{"event": "startup", "model_loaded": true}')
-    except Exception as e:
-        logger.error('{"event": "startup", "model_loaded": false, "error": "%s"}' % str(e))
+    except Exception:
+        logger.error(
+            '{"event": "startup", "model_loaded": false, "load_error": "%s"}' % model_service.load_error
+        )
     yield
 
 
@@ -97,7 +99,10 @@ def _predict_one(request: PredictionRequest, request_id: str) -> PredictionRespo
 @app.get("/health")
 async def health():
     if not model_service.is_loaded:
-        return JSONResponse(status_code=503, content={"status": "degraded", "model_loaded": False})
+        content = {"status": "degraded", "model_loaded": False}
+        if model_service.load_error:
+            content["load_error"] = model_service.load_error
+        return JSONResponse(status_code=503, content=content)
     return {"status": "ok", "model_loaded": True}
 
 

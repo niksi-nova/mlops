@@ -12,6 +12,10 @@ Configuration (environment variables):
                 Read directly by the wandb client when MODEL_PATH is not
                 set and a registry alias must be resolved remotely; no
                 extra handling is needed here.
+  WANDB_ENTITY / WANDB_PROJECT
+                Override the registry workspace/project to look the alias
+                up in. Default to src.models.registry's own defaults
+                (anikaub20-rv-college / delhi-bus-delay) when unset.
 """
 
 from __future__ import annotations
@@ -25,7 +29,14 @@ from typing import Any
 
 import pandas as pd
 
-from src.models.registry import ProductionModel, load_model
+from src.models.registry import (
+    DEFAULT_COLLECTION,
+    DEFAULT_PROJECT,
+    DEFAULT_WORKSPACE,
+    ProductionModel,
+    load_model,
+    redact_secrets,
+)
 
 logger = logging.getLogger("model_service")
 
@@ -38,11 +49,18 @@ class ModelService:
 
     def __init__(self) -> None:
         self._model: ProductionModel | None = None
+        self._load_error: str | None = None
         self._lock = threading.Lock()
 
     @property
     def is_loaded(self) -> bool:
         return self._model is not None
+
+    @property
+    def load_error(self) -> str | None:
+        """A short, redacted description of why the last load attempt
+        failed, or None if the model is loaded (or load() was never called)."""
+        return self._load_error
 
     def load(self, model: ProductionModel | None = None) -> None:
         """Load the configured model. Pass `model` directly in tests to
@@ -50,17 +68,41 @@ class ModelService:
         with self._lock:
             if model is not None:
                 self._model = model
+                self._load_error = None
                 return
 
             model_path = os.environ.get("MODEL_PATH")
             alias = os.environ.get("MODEL_ALIAS", "production")
+            entity = os.environ.get("WANDB_ENTITY", DEFAULT_WORKSPACE)
+            project = os.environ.get("WANDB_PROJECT", DEFAULT_PROJECT)
             source = model_path if model_path else alias
-            logger.info("model_service: loading model source=%s", source)
-            self._model = load_model(source)
+
+            logger.info(
+                '{"event": "model_load_config", "model_path_set": %s, "alias": "%s", '
+                '"wandb_api_key_set": %s, "wandb_base_url": %s, "entity": "%s", '
+                '"project": "%s", "collection": "%s"}'
+                % (
+                    json.dumps(bool(model_path)),
+                    alias,
+                    json.dumps(bool(os.environ.get("WANDB_API_KEY"))),
+                    json.dumps(os.environ.get("WANDB_BASE_URL")),
+                    entity,
+                    project,
+                    DEFAULT_COLLECTION,
+                )
+            )
+
+            try:
+                self._model = load_model(source, project=project, workspace=entity)
+                self._load_error = None
+            except Exception as exc:
+                self._load_error = redact_secrets(str(exc))
+                raise
 
     def unload(self) -> None:
         with self._lock:
             self._model = None
+            self._load_error = None
 
     def predict(self, df: pd.DataFrame) -> Any:
         if self._model is None:

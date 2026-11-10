@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +39,8 @@ import wandb
 from src.models.evaluate import predict
 from src.models.tracking import DATASET_VERSION, ensure_wandb_login, lineage_config, load_params
 
+logger = logging.getLogger("src.models.registry")
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MODELS_DIR = PROJECT_ROOT / "models"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
@@ -49,6 +53,24 @@ APPROVALS_HISTORY_PATH = PROJECT_ROOT / "reports" / "production_approvals.json"
 DEFAULT_WORKSPACE = "anikaub20-rv-college"
 DEFAULT_PROJECT = "delhi-bus-delay"
 DEFAULT_COLLECTION = "delhi-bus-delay-model"
+
+# Matches credential-shaped tokens (wandb keys, API tokens): a continuous
+# run of 32+ alphanumeric/underscore characters, no hyphens - this avoids
+# false-matching legitimate hyphenated identifiers like "delhi-bus-delay-model"
+# or "anikaub20-rv-college", which split into short hyphen-separated words.
+_SECRET_LIKE_TOKEN = re.compile(r"\b[A-Za-z0-9_]{32,}\b")
+
+
+def redact_secrets(text: str) -> str:
+    """Strip anything that could be a credential out of a message before
+    it's ever logged or returned in an API response: the current
+    WANDB_API_KEY value if set, and defensively any other long token-like
+    substring (wandb keys, API tokens in general)."""
+    redacted = text
+    api_key = os.environ.get("WANDB_API_KEY")
+    if api_key:
+        redacted = redacted.replace(api_key, "***REDACTED***")
+    return _SECRET_LIKE_TOKEN.sub("***REDACTED***", redacted)
 
 
 def _safe_relative(path: Path) -> str:
@@ -103,28 +125,64 @@ def _fetch_wandb_artifact_joblib(
 ) -> tuple[Path, str] | None:
     """Download the W&B registry artifact currently tagged `alias` and return
     (local .joblib path, artifact version), or None if it's unavailable for
-    any reason (offline, not logged in, alias not found, no .joblib inside).
+    any reason (offline, not logged in, host unreachable, entity/collection
+    not found, alias not found, no .joblib inside).
 
     Never raises - callers decide what an absent remote artifact means.
+    Every failure is logged as one WARNING (exception class + redacted
+    message) so the reason is visible instead of silently vanishing.
     Never logs credentials. Downloads into a writable, non-$HOME directory
     (WANDB_CACHE_DIR, defaulting to /tmp/wandb-cache) so this works under a
     non-root container user with no home directory.
     """
+    target_path = f"{workspace}/{project}/{collection}:{alias}"
     try:
         if not ensure_wandb_login():
+            logger.warning(
+                "W&B fetch for alias=%r (%s) aborted: no W&B login available", alias, target_path
+            )
             return None
+    except Exception as exc:
+        logger.warning(
+            "W&B fetch for alias=%r (%s) aborted: login raised %s: %s",
+            alias, target_path, type(exc).__name__, redact_secrets(str(exc)),
+        )
+        return None
+
+    try:
         api = wandb.Api()
-        target_path = f"{workspace}/{project}/{collection}:{alias}"
-        try:
-            artifact = api.artifact(target_path)
-        except Exception:
-            artifact = api.artifact(f"{collection}:{alias}")
+    except Exception as exc:
+        logger.warning(
+            "W&B fetch for alias=%r (%s) failed: could not create API client - %s: %s",
+            alias, target_path, type(exc).__name__, redact_secrets(str(exc)),
+        )
+        return None
 
-        # The artifact we found must actually carry the alias we asked for -
-        # refuse rather than silently serving a stale/mismatched reference.
-        if alias not in artifact.aliases:
+    try:
+        artifact = api.artifact(target_path)
+    except Exception as primary_exc:
+        try:
+            artifact = api.artifact(f"{collection}:{alias}")
+        except Exception as fallback_exc:
+            logger.warning(
+                "W&B fetch for alias=%r (%s) failed: %s: %s (fallback lookup '%s:%s' also failed: %s: %s)",
+                alias, target_path,
+                type(primary_exc).__name__, redact_secrets(str(primary_exc)),
+                collection, alias,
+                type(fallback_exc).__name__, redact_secrets(str(fallback_exc)),
+            )
             return None
 
+    # The artifact we found must actually carry the alias we asked for -
+    # refuse rather than silently serving a stale/mismatched reference.
+    if alias not in artifact.aliases:
+        logger.warning(
+            "W&B fetch for alias=%r (%s) refused: resolved artifact's aliases are %s, missing %r",
+            alias, target_path, artifact.aliases, alias,
+        )
+        return None
+
+    try:
         cache_root = Path(os.environ.get("WANDB_CACHE_DIR", "/tmp/wandb-cache"))
         download_dir = cache_root / "artifacts" / collection / alias
         download_dir.mkdir(parents=True, exist_ok=True)
@@ -132,9 +190,17 @@ def _fetch_wandb_artifact_joblib(
 
         joblib_files = list(downloaded.glob("*.joblib"))
         if not joblib_files:
+            logger.warning(
+                "W&B fetch for alias=%r (%s) failed: artifact downloaded to %s but contains no .joblib file",
+                alias, target_path, downloaded,
+            )
             return None
         return joblib_files[0], artifact.version
-    except Exception:
+    except Exception as exc:
+        logger.warning(
+            "W&B fetch for alias=%r (%s) failed during download: %s: %s",
+            alias, target_path, type(exc).__name__, redact_secrets(str(exc)),
+        )
         return None
 
 

@@ -12,7 +12,16 @@
 
 1. **Make the GHCR package public.** After CD's first successful push, go to the package's settings on GitHub (`niksi-nova` org/user → Packages → `mlops`) and change visibility to public. Render's free tier can't pull a private image without extra credentials this project doesn't set up — see the troubleshooting note below.
 2. **Create the Render web service** from an existing image: `ghcr.io/niksi-nova/mlops:latest`, free instance type.
-3. **Set these environment variables on the Render service**: `WANDB_API_KEY`, `WANDB_BASE_URL`, `MODEL_ALIAS=production`. (If you'd rather not depend on live W&B access, set `MODEL_PATH` instead to a path inside the image/a mounted disk and skip the W&B variables entirely.)
+3. **Set these environment variables on the Render service**:
+
+   | Variable | Required? | Purpose |
+   |---|---|---|
+   | `WANDB_API_KEY` | yes (unless using `MODEL_PATH`) | W&B auth token. |
+   | `WANDB_BASE_URL` | yes, if using a non-default W&B host (e.g. `https://api.forge.coreweave.com`) | Which W&B instance to talk to. |
+   | `MODEL_ALIAS` | yes | Set to `production`. |
+   | `WANDB_ENTITY` | no | Overrides the registry workspace to look the alias up in. Defaults to `anikaub20-rv-college` if unset. |
+   | `WANDB_PROJECT` | no | Overrides the registry project. Defaults to `delhi-bus-delay` if unset. |
+   | `MODEL_PATH` | no | Set instead of the W&B variables to load from a path inside the image/a mounted disk, skipping live W&B access entirely. |
 4. **Add to this repo**: secret `RENDER_DEPLOY_HOOK` (from the Render service's Settings → Deploy Hook) and repository **variable** `RENDER_URL` (the service's public URL, e.g. `https://delhi-bus-delay-api.onrender.com`).
 
 ## Rolling back
@@ -35,3 +44,14 @@ Because `register_model()`/`promote_to_production()` silently fall back to `loca
 ## Troubleshooting
 
 If the CD deploy's health poll fails, check the job summary and logs first. The most common cause: `ghcr.io/niksi-nova/mlops` is a **private** GHCR package, so Render's image pull fails (Render's free tier doesn't support authenticating to a private registry) — making the package public fixes this.
+
+### Diagnosing a model-load failure
+
+A failed load now surfaces, instead of silently vanishing:
+- **At startup**, one `model_load_config` log line shows whether `WANDB_API_KEY` is set (`true`/`false` only, never the value), the `WANDB_BASE_URL` host, the resolved entity/project/collection/alias, and whether `MODEL_PATH` is set.
+- If the W&B fetch fails, a `WARNING` log line names the exact stage that failed (login, API client creation, artifact lookup, alias check, or download) along with the exception class and a redacted message.
+- `GET /health`'s 503 body and the final startup log line both include a short, redacted `load_error`.
+
+This was added after a real incident: Render logged only
+`"Production model artifact not found on disk at /app/models/best_model.joblib or in the W&B registry."`
+with no indication of *why* the remote fallback failed. Reproducing the same `MODEL_ALIAS=production`, env-vars-only configuration locally (pulling the published `ghcr.io/niksi-nova/mlops:latest` image, no mounted files) actually **succeeded** both with and without `WANDB_BASE_URL` set — so the failure is specific to Render's own network/runtime environment and could not be reproduced from a developer machine. The new logging is what makes the *next* occurrence diagnosable directly from Render's logs and `/health` response, without needing to reproduce it elsewhere.

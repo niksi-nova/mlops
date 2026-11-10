@@ -73,7 +73,11 @@ def _inject_fake_model(**kwargs) -> FakeModel:
 def test_health_returns_503_when_model_not_loaded(client):
     response = client.get("/health")
     assert response.status_code == 503
-    assert response.json() == {"status": "degraded", "model_loaded": False}
+    body = response.json()
+    assert body["status"] == "degraded"
+    assert body["model_loaded"] is False
+    # The blocked-in-unit-tests load failure surfaces as a short load_error.
+    assert "load_error" in body
 
 
 def test_health_ok_when_model_loaded(client):
