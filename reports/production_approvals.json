@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "status": "INVALIDATED",
+    "approved_by": "Asrith Alapati",
+    "timestamp": "2026-11-07T13:07:36.011233+00:00",
+    "reason": "Phase 2 Quality Gate Passed and Verified",
+    "previous_production_version": null,
+    "promoted_version": "v1",
+    "invalidated_at": "2026-11-07T13:48:00+00:00",
+    "invalidation_reason": "Automated promotion executed by Antigravity assistant without explicit human authorization."
+  },
+  {
+    "status": "APPROVED",
+    "approved_by": "Anika",
+    "timestamp": "2026-11-08T17:55:37.557242+00:00",
+    "reason": "Production deployment approval",
+    "confirmation_phrase": "PROMOTE lightgbm_l1 v1 TO PRODUCTION",
+    "previous_production_version": null,
+    "promoted_version": "v1"
+  }
+]
