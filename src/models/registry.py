@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -71,12 +72,14 @@ class ProductionModel:
         alias: str = "production",
         version: str = "v1",
         model_name: str = "lightgbm_l1",
+        source: str = "local",
     ):
         self.model = model
         self.feature_spec = feature_spec
         self.alias = alias
         self.version = version
         self.model_name = model_name
+        self.source = source  # "local" (models/*.joblib on disk) or "wandb" (downloaded from the registry)
         self.categorical_features = feature_spec.get("categorical_features", [])
         self.numeric_features = feature_spec.get("numeric_features", [])
         self.expected_feature_columns = self.categorical_features + self.numeric_features
@@ -95,6 +98,46 @@ class ProductionModel:
         return getattr(self.model, name)
 
 
+def _fetch_wandb_artifact_joblib(
+    alias: str, workspace: str, project: str, collection: str = DEFAULT_COLLECTION
+) -> tuple[Path, str] | None:
+    """Download the W&B registry artifact currently tagged `alias` and return
+    (local .joblib path, artifact version), or None if it's unavailable for
+    any reason (offline, not logged in, alias not found, no .joblib inside).
+
+    Never raises - callers decide what an absent remote artifact means.
+    Never logs credentials. Downloads into a writable, non-$HOME directory
+    (WANDB_CACHE_DIR, defaulting to /tmp/wandb-cache) so this works under a
+    non-root container user with no home directory.
+    """
+    try:
+        if not ensure_wandb_login():
+            return None
+        api = wandb.Api()
+        target_path = f"{workspace}/{project}/{collection}:{alias}"
+        try:
+            artifact = api.artifact(target_path)
+        except Exception:
+            artifact = api.artifact(f"{collection}:{alias}")
+
+        # The artifact we found must actually carry the alias we asked for -
+        # refuse rather than silently serving a stale/mismatched reference.
+        if alias not in artifact.aliases:
+            return None
+
+        cache_root = Path(os.environ.get("WANDB_CACHE_DIR", "/tmp/wandb-cache"))
+        download_dir = cache_root / "artifacts" / collection / alias
+        download_dir.mkdir(parents=True, exist_ok=True)
+        downloaded = Path(artifact.download(root=str(download_dir)))
+
+        joblib_files = list(downloaded.glob("*.joblib"))
+        if not joblib_files:
+            return None
+        return joblib_files[0], artifact.version
+    except Exception:
+        return None
+
+
 def load_model(
     alias_or_path: str = "production",
     project: str | None = None,
@@ -109,6 +152,12 @@ def load_model(
       - Requires an active, non-invalidated production assignment in the registry.
       - If unassigned or invalidated, raises RuntimeError.
       - NEVER falls back to staging, candidate, or local best_model.joblib.
+      - If no local copy of the approved version exists, falls back to
+        downloading the matching artifact from the W&B registry - but only
+        after the authorization checks above already passed, and only if
+        the downloaded artifact itself still carries the 'production' alias.
+        This changes WHERE the already-authorized bytes come from, never
+        WHETHER production is authorized.
 
     Usage:
         from src.models import load_model
@@ -126,7 +175,7 @@ def load_model(
     direct_path = Path(alias_or_path)
     if direct_path.exists() and direct_path.is_file():
         raw_model = joblib.load(direct_path)
-        return ProductionModel(raw_model, spec, alias="custom_path", model_name="lightgbm_l1")
+        return ProductionModel(raw_model, spec, alias="custom_path", model_name="lightgbm_l1", source="local")
 
     # 2. Local registry report metadata check
     registry_meta: dict[str, Any] = {}
@@ -172,9 +221,24 @@ def load_model(
         if target_model_file.exists():
             raw_model = joblib.load(target_model_file)
             return ProductionModel(
-                raw_model, spec, alias="production", version=prod_version, model_name=model_name
+                raw_model, spec, alias="production", version=prod_version, model_name=model_name, source="local"
             )
-        raise FileNotFoundError(f"Production model artifact not found on disk at {target_model_file}")
+
+        # No local copy - the authorization above already passed, so fall
+        # back to the same remote lookup candidate/latest use.
+        params = load_params()
+        proj = project or params.get("train", {}).get("wandb_project", DEFAULT_PROJECT)
+        remote = _fetch_wandb_artifact_joblib("production", workspace, proj)
+        if remote is not None:
+            joblib_path, _remote_version = remote
+            raw_model = joblib.load(joblib_path)
+            return ProductionModel(
+                raw_model, spec, alias="production", version=prod_version, model_name=model_name, source="wandb"
+            )
+
+        raise FileNotFoundError(
+            f"Production model artifact not found on disk at {target_model_file} or in the W&B registry."
+        )
 
     # 4. Handle 'staging' alias
     if alias_or_path == "staging":
@@ -193,7 +257,17 @@ def load_model(
             if target_model_file.exists():
                 raw_model = joblib.load(target_model_file)
                 return ProductionModel(
-                    raw_model, spec, alias="staging", version=staging_version, model_name=model_name
+                    raw_model, spec, alias="staging", version=staging_version, model_name=model_name, source="local"
+                )
+
+            params = load_params()
+            proj = project or params.get("train", {}).get("wandb_project", DEFAULT_PROJECT)
+            remote = _fetch_wandb_artifact_joblib("staging", workspace, proj)
+            if remote is not None:
+                joblib_path, _remote_version = remote
+                raw_model = joblib.load(joblib_path)
+                return ProductionModel(
+                    raw_model, spec, alias="staging", version=staging_version, model_name=model_name, source="wandb"
                 )
         raise RuntimeError("No model is currently assigned to the 'staging' alias in the registry.")
 
@@ -206,7 +280,7 @@ def load_model(
         if target_model_file.exists():
             raw_model = joblib.load(target_model_file)
             return ProductionModel(
-                raw_model, spec, alias=alias_or_path, version=version, model_name=model_name
+                raw_model, spec, alias=alias_or_path, version=version, model_name=model_name, source="local"
             )
 
     # 6. Local named model file in models/ (e.g., 'lightgbm_l1', 'random_forest')
@@ -214,31 +288,19 @@ def load_model(
         candidate_local = MODELS_DIR / f"{alias_or_path}.joblib"
         if candidate_local.exists():
             raw_model = joblib.load(candidate_local)
-            return ProductionModel(raw_model, spec, alias=alias_or_path, model_name=alias_or_path)
+            return ProductionModel(raw_model, spec, alias=alias_or_path, model_name=alias_or_path, source="local")
 
     # 7. Remote W&B Model Registry lookup (if online and authenticated, never for unauthorized production)
     if alias_or_path != "production":
         params = load_params()
         proj = project or params.get("train", {}).get("wandb_project", DEFAULT_PROJECT)
-        collection = DEFAULT_COLLECTION
-
-        try:
-            api = wandb.Api()
-            target_path = f"{workspace}/{proj}/{collection}:{alias_or_path}"
-            try:
-                artifact = api.artifact(target_path)
-            except Exception:
-                artifact = api.artifact(f"{collection}:{alias_or_path}")
-
-            download_dir = Path(artifact.download())
-            joblib_files = list(download_dir.glob("*.joblib"))
-            if joblib_files:
-                raw_model = joblib.load(joblib_files[0])
-                return ProductionModel(
-                    raw_model, spec, alias=alias_or_path, version=artifact.version, model_name=model_name
-                )
-        except Exception:
-            pass
+        remote = _fetch_wandb_artifact_joblib(alias_or_path, workspace, proj)
+        if remote is not None:
+            joblib_path, remote_version = remote
+            raw_model = joblib.load(joblib_path)
+            return ProductionModel(
+                raw_model, spec, alias=alias_or_path, version=remote_version, model_name=model_name, source="wandb"
+            )
 
     raise FileNotFoundError(f"Model not found for alias or path '{alias_or_path}'")
 

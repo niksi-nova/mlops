@@ -1,0 +1,37 @@
+# Deployment
+
+## Architecture
+
+1. A push to `main` runs CI (tests, quality gate, Docker smoke test).
+2. CD builds the slim Docker image and pushes it to `ghcr.io/niksi-nova/mlops`, tagged `sha-<short sha>` and `latest`.
+3. CD then calls a Render deploy hook, telling Render's free web service to pull and run this run's `sha-<short sha>` image tag.
+4. At container startup, the API loads the model tagged `production` from the W&B registry (`delhi-bus-delay-model`) — or a mounted `MODEL_PATH` file instead, if one's configured.
+5. CD polls the live Render URL's `/health` until `model_loaded` is `true`, or fails after 12 minutes.
+
+## One-time setup
+
+1. **Make the GHCR package public.** After CD's first successful push, go to the package's settings on GitHub (`niksi-nova` org/user → Packages → `mlops`) and change visibility to public. Render's free tier can't pull a private image without extra credentials this project doesn't set up — see the troubleshooting note below.
+2. **Create the Render web service** from an existing image: `ghcr.io/niksi-nova/mlops:latest`, free instance type.
+3. **Set these environment variables on the Render service**: `WANDB_API_KEY`, `WANDB_BASE_URL`, `MODEL_ALIAS=production`. (If you'd rather not depend on live W&B access, set `MODEL_PATH` instead to a path inside the image/a mounted disk and skip the W&B variables entirely.)
+4. **Add to this repo**: secret `RENDER_DEPLOY_HOOK` (from the Render service's Settings → Deploy Hook) and repository **variable** `RENDER_URL` (the service's public URL, e.g. `https://delhi-bus-delay-api.onrender.com`).
+
+## Rolling back
+
+- **Redeploy an older image**: trigger the Render deploy hook yourself with `imgURL` set to an older `ghcr.io/niksi-nova/mlops:sha-<short sha>` tag (see any past CD run's job summary for the exact tag), or use Render's dashboard to redeploy a previous build.
+- **Re-promote an older registry version**: if the issue is the model itself rather than the API code, run `uv run python -m src.models.registry --promote-production --approved-by "Name"` against an earlier artifact version instead of touching the deployment at all — the API picks up whatever currently holds the `production` alias the next time it restarts (or loads it fresh at startup).
+
+## Render free tier constraints
+
+- **512MB RAM.** Measured peak memory in W&B mode, under `--memory=512m --memory-swap=512m`, hammering `/predict` and 500-row `/predict/batch` calls repeatedly: ~272MiB, stable, no growth, never OOM-killed. Comfortable headroom under the 512MB limit with no tuning needed.
+- **Sleeps after 15 minutes of inactivity**, and takes about a minute to wake on the next request. The CD deploy's health poll accounts for this (12-minute budget, 15s between checks).
+
+## Promotion procedure
+
+Because `register_model()`/`promote_to_production()` silently fall back to `local_fallback` mode when no live W&B session is active — only updating local files, never the remote artifact's alias — always:
+
+1. Run `uv run wandb login` (or otherwise confirm you're logged in) **before** running `uv run python -m src.models.registry` or `--promote-production`. If you're not logged in, the command still "succeeds" but only writes `reports/model_registry.json`/`reports/production_approvals.json` locally — the real W&B artifact never gets the alias.
+2. **After promoting**, check in the W&B UI (or `wandb.Api().artifacts(...)`) that the artifact actually carries the `production` alias remotely. This project hit exactly this gap once: a local approval existed with no matching remote alias, so a container running in pure W&B mode (no `MODEL_PATH`) couldn't find anything to serve until the alias was attached to the artifact directly in W&B.
+
+## Troubleshooting
+
+If the CD deploy's health poll fails, check the job summary and logs first. The most common cause: `ghcr.io/niksi-nova/mlops` is a **private** GHCR package, so Render's image pull fails (Render's free tier doesn't support authenticating to a private registry) — making the package public fixes this.

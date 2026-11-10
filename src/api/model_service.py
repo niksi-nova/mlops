@@ -84,6 +84,7 @@ class ModelService:
             "alias": self._model.alias,
             "version": self._model.version,
             "model_name": self._model.model_name,
+            "source": getattr(self._model, "source", "local"),
             "git_commit": self._registry_git_commit(),
             "feature_columns": self._model.expected_feature_columns,
             "categorical_features": self._model.categorical_features,
