@@ -1,0 +1,15 @@
+# Top-level packages actually imported by src/api and the import chain of
+# src/models/registry.py (evaluate.py -> train.py -> baselines.py/tracking.py).
+# Versions are pinned via constraints.txt (generated from uv.lock) so the
+# served image matches what `uv sync` installs for development.
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+lightgbm
+joblib
+pydantic
+pyyaml
+wandb
+matplotlib

@@ -1,0 +1,45 @@
+.git/
+.dvc/
+wandb/
+notebooks/
+tests/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+*.env
+.env.*
+*.key
+*.pem
+secrets/
+model_export/
+models/
+*.png
+docs/
+*.md
+.gitignore
+.dockerignore
+.DS_Store
+.vscode/
+.idea/
+tmp/
+.uv-cache/
+
+# Raw/intermediate data and figures: not needed by the API, only
+# data/processed/feature_spec.json is copied explicitly in the Dockerfile.
+data/raw/
+data/interim/
+data/cache/
+data/processed/*.parquet
+
+# Report JSONs: only model_registry.json and production_approvals.json
+# are copied explicitly (negated below); the rest (quality_gate.json,
+# test_metrics.json, etc.) aren't needed at runtime.
+reports/*.json
+reports/figures/
+!reports/model_registry.json
+!reports/production_approvals.json

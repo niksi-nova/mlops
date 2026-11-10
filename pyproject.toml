@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "dvc>=3.67.1",
     "dvc-s3>=3.3.0",
+    "fastapi>=0.162.2",
     "holidays>=0.106",
     "joblib>=1.6.0",
     "jupyter>=1.1.1",
@@ -22,15 +23,21 @@ dependencies = [
     "scikit-learn>=1.9.1",
     "seaborn>=0.13.2",
     "tabulate>=0.10.0",
+    "uvicorn[standard]>=0.54.0",
     "wandb>=0.31.0",
     "xgboost>=3.2.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+    "integration: requires network/W&B credentials or a local MODEL_PATH to load the real model",
+    "needs_data: requires DVC-pulled data/processed and models/lightgbm_l1.joblib on disk",
+]
