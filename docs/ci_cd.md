@@ -27,17 +27,29 @@ Three jobs, `quality-gate` and `docker-smoke` both depend on `tests`:
 2. **quality-gate** — pulls the same minimal DVC targets, runs
    `uv run python -m src.models.quality_gate` (job fails on its non-zero
    exit code automatically), uploads `reports/quality_gate.json` as a
-   build artifact, then runs `uv run dvc status`.
-   - **Caveat on the `dvc status` check**: on this repo, plain `dvc status`
-     is *never* fully empty, even right after a clean pull/push. Several
-     report JSONs (`quality_gate.json`, `model_registry.json`, etc.) embed
-     a fresh timestamp on every run, and `git checkout` resets source file
-     mtimes, so DVC always reports "modified" deps/outs noise that has
-     nothing to do with whether the pipeline is actually stale. Failing
-     the job on *any* `dvc status` output would make this check permanently
-     red. Instead, the job only fails when the output mentions
-     `not in cache` or `missing` — i.e. DVC genuinely can't find data it
-     expects, which is the thing worth blocking on.
+   build artifact, then checks that those same targets are in sync with
+   the remote.
+   - **Why scoped, and why `-c` with explicit targets**: a plain
+     `dvc status` (no targets, no `-c`) reports on *every* stage in the
+     whole pipeline — `data/raw`, `data/interim/*`, the full `models/`
+     directory (including the unused `random_forest.joblib`), and
+     `reports/figures/eval` — none of which this job ever pulls. It would
+     always show those as "not in cache", regardless of whether anything
+     is actually wrong, because this job intentionally only pulls
+     `$DVC_PULL_TARGETS`. `dvc status -c $DVC_PULL_TARGETS` instead checks
+     only those five named paths against the remote cache, which is
+     exactly what the quality gate and registry stages depend on — a
+     meaningful check instead of permanent noise.
+   - **How it decides pass/fail**: when every target is present locally
+     and matches the remote, `dvc status -c` prints exactly
+     `Cache and remote 'origin' are in sync.`; the job greps for `"in
+     sync"` and fails if that phrase is absent (anything else — a
+     `deleted:`/`new:`/`modified:` line per target — means something's
+     out of sync). Verified locally both ways: with all five targets
+     present it prints the "in sync" message; with one target (the
+     trained model) deliberately absent from the local cache, it reports
+     `deleted: models/lightgbm_l1.joblib` instead and nothing else — no
+     noise from the other, deliberately-unpulled stages.
 
 3. **docker-smoke** — pulls `feature_spec.json` and `models/lightgbm_l1.joblib`,
    builds the image, runs it in local-file mode

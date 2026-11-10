@@ -114,18 +114,22 @@ jobs:
           name: quality-gate-report
           path: reports/quality_gate.json
 
-      - name: Check data/model integrity (dvc status)
+      - name: Check quality-gate artifacts are in sync with the remote
         run: |
-          output=$(uv run dvc status)
+          # Scoped deliberately to exactly what this job pulled above
+          # ($DVC_PULL_TARGETS). Plain `dvc status` (no targets, no -c)
+          # reports on every stage in the whole pipeline, including
+          # data/raw, data/interim, the full models/ directory and
+          # reports/figures/eval - none of which this job ever pulls, so
+          # it always shows them as "not in cache" regardless of whether
+          # anything is actually wrong. `dvc status -c <targets>` instead
+          # checks only the named paths against the remote cache, which is
+          # exactly what the quality gate and registry stages depend on.
+          # shellcheck disable=SC2086
+          output=$(uv run dvc status -c $DVC_PULL_TARGETS)
           echo "$output"
-          # On this repo, plain `dvc status` is never fully empty: several
-          # report JSONs embed a fresh timestamp every run, and git checkout
-          # normalizes source file mtimes, so "modified" noise on deps/outs
-          # is expected and NOT a sign the pipeline is stale - see
-          # docs/ci_cd.md. What genuinely indicates a stale/broken pipeline
-          # is DVC reporting data it cannot find at all.
-          if echo "$output" | grep -qiE "not in cache|missing"; then
-            echo "::error::dvc status reports missing/not-in-cache data - pipeline is not reproducible as committed"
+          if ! echo "$output" | grep -q "in sync"; then
+            echo "::error::quality-gate's artifacts are not in sync with the DVC remote (see output above)"
             exit 1
           fi
 
