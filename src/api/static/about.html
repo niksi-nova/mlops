@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>About</h1>
+
+  <div class="panel">
+    <h2>What this predicts</h2>
+    <p>For one stop-to-stop segment of a Delhi bus route, the model predicts <strong>travel_time_s</strong> — how many seconds that bus takes to cross that segment, given 25 pre-computed features (position on the route, time of day, and real-time conditions like the previous bus's travel time and the gap since it passed).</p>
+    <p><strong>Honest caveat:</strong> the API takes those 25 features as input — it does not compute any of them itself. In particular, the real-time ones (previous bus travel time, median of the last 3 buses, headway, buses in the recent window, has-previous-bus) must be supplied by the caller. The Counter page on this site fills them in with real historical medians for the chosen segment and hour, as a stand-in for a live feed this project doesn't build.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Data limitations</h2>
+    <ul>
+      <li>Only two routes (425, 534) in both directions — not a city-wide model.</li>
+      <li>No real GPS coordinates, only stop-sequence node indices.</li>
+      <li>No real calendar dates — only relative day indices and weekdays.</li>
+      <li>See <a href="/data">Data</a> for the full breakdown and the dataset card in the repo.</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Team & course</h2>
+    <p>RVCE, CSE (AI and ML), Machine Learning Operations, AI252TA.</p>
+    <ul>
+      <li>Anika U Bhat — 1RV24CI016</li>
+      <li>Ajay Balaji — 1RV24CI014</li>
+      <li>Alapati Asrith — 1RV24CI015</li>
+      <li>Aditya Belavadi — 1RV24CI013</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Links</h2>
+    <p><a href="/docs">API docs (Swagger UI)</a> · <a href="https://github.com/niksi-nova/mlops">GitHub repository</a></p>
+  </div>
+
+  <div class="panel">
+    <h2>Font credits</h2>
+    <p>Bricolage Grotesque, Courier Prime, and IBM Plex Mono are all licensed under the <a href="https://scripts.sil.org/OFL">SIL Open Font License 1.1</a>. Self-hosted here, no CDN.</p>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script>
+fetchJSON(`${DATA_BASE}/meta.json`).then((meta) => {
+  document.getElementById("site-footer").textContent = `snapshot built ${meta.snapshot_built} from commit ${meta.git_commit}`;
+});
+</script>
+</body>
+</html>

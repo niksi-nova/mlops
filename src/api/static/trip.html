@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+  <div id="status-chip" class="status-chip waking" role="status" aria-live="polite">
+    <span class="dot"></span><span class="bus">🚌</span><span class="chip-label">checking…</span>
+  </div>
+</header>
+
+<main id="main">
+  <h1>Trip — a whole run, segment by segment</h1>
+  <p class="muted">One real test-set trip, sent live to <code>/predict/batch</code>, segment by segment along the route line.</p>
+
+  <div class="panel">
+    <label for="trip-select">Example trip</label>
+    <select id="trip-select"></select>
+  </div>
+
+  <div class="panel">
+    <h2>Predicted vs actual, along the route</h2>
+    <div id="trip-route-line" class="route-line-wrap"></div>
+    <div id="trip-chart"></div>
+    <p class="chart-caption">Predicted (orange) vs actual (green) travel time per segment; cumulative arrival time below.</p>
+    <details class="data-table-toggle"><summary>view data table</summary><div id="trip-table"></div></details>
+    <p id="trip-total-error" class="num"></p>
+  </div>
+
+  <div class="panel">
+    <h2>Run your own rows</h2>
+    <p class="chart-caption">Paste a JSON array of feature rows, or upload a CSV with the same 25 columns. Max 500 rows.</p>
+    <textarea id="bulk-json" rows="4" style="width:100%; font-family:var(--font-num);" placeholder="[{&quot;route&quot;: &quot;425&quot;, ...}]"></textarea>
+    <div class="flex-row" style="margin-top:8px;">
+      <input type="file" id="csv-upload" accept=".csv">
+      <button type="button" id="run-bulk-btn">Run through /predict/batch</button>
+      <button type="button" id="download-csv-btn" class="secondary" style="display:none">Download results CSV</button>
+    </div>
+    <span id="bulk-error" class="error-banner" style="display:none" role="alert"></span>
+    <div id="bulk-results" style="margin-top:10px;"></div>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script src="/static/js/app.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/trip.js"></script>
+</body>
+</html>
