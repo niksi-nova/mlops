@@ -89,12 +89,22 @@ jobs:
 
       - name: Compute this run's image reference
         id: image_ref
-        # Matches the `type=sha,format=short` tag above (sha-<7-char-short-sha>)
-        # without depending on which of metadata-action's multiple tags its
-        # single `version` output happens to pick.
+        # Read the actual sha-* tag out of metadata-action's own JSON output
+        # rather than recomputing the "sha-<7 chars>" format independently -
+        # if metadata-action's tag format or short-SHA length ever changes,
+        # a hand-rolled recomputation would silently stop matching what was
+        # actually pushed, and the deploy job would tell Render to pull a
+        # tag that doesn't exist.
         run: |
-          short_sha="$(echo "${{ github.sha }}" | cut -c1-7)"
-          echo "value=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${short_sha}" >> "$GITHUB_OUTPUT"
+          tag="$(echo '${{ steps.meta.outputs.json }}' | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          sha_tags = [t for t in data['tags'] if ':sha-' in t]
+          if not sha_tags:
+              sys.exit('no sha-* tag found in metadata-action output: ' + repr(data['tags']))
+          print(sha_tags[0])
+          ")"
+          echo "value=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Write job summary
         run: |
@@ -108,7 +118,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check deploy configuration
         id: check
@@ -119,6 +129,9 @@ jobs:
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
+          # Normalize once (strip a trailing slash) so every later step uses
+          # the same URL shape, instead of each curl call re-deriving it.
+          echo "render_url=$(echo '${{ vars.RENDER_URL }}' | sed 's:/*$::')" >> "$GITHUB_OUTPUT"
 
       - name: Trigger Render deploy hook
         id: trigger
@@ -136,50 +149,81 @@ jobs:
           # encoding of the complete image reference. The hook URL may
           # already carry its own "key" query parameter, so append with
           # "&" if a "?" is already present, "?" otherwise. The hook URL
-          # itself is never echoed or logged.
+          # itself is never echoed or logged - only the HTTP status is.
           encoded_img="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$IMAGE_REF")"
           case "$RENDER_DEPLOY_HOOK" in
             *"?"*) sep="&" ;;
             *) sep="?" ;;
           esac
           full_url="${RENDER_DEPLOY_HOOK}${sep}imgURL=${encoded_img}"
-          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$full_url")
-          echo "Render deploy hook HTTP status: $status"
+          status=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 --max-time 20 -X POST "$full_url")
+          curl_exit=$?
+          echo "Render deploy hook HTTP status: $status (curl exit code: $curl_exit)"
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "::error::Render deploy hook call failed (curl exit code $curl_exit) - hook URL unreachable, timed out, or malformed. Never logging the URL itself; verify the RENDER_DEPLOY_HOOK secret directly in Render's dashboard."
+            exit 1
+          fi
           if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "::error::Render deploy hook returned HTTP $status"
+            echo "::error::Render deploy hook rejected the request: HTTP $status."
             exit 1
           fi
 
-      - name: Poll Render for a healthy deploy
+      - name: Poll Render for the new deploy to come up healthy
         id: poll
         if: steps.check.outputs.configured == 'true'
         env:
-          RENDER_URL: ${{ vars.RENDER_URL }}
+          RENDER_URL: ${{ steps.check.outputs.render_url }}
         run: |
           # A sleeping free-tier instance takes about a minute to wake up;
-          # poll for up to 12 minutes total.
+          # poll for up to 12 minutes total. Every curl call is individually
+          # time-bounded so a stalled connection can never hold this loop
+          # (or the job) open past that budget.
           deadline=$((SECONDS + 720))
-          healthy="false"
+          attempt=0
+          outcome="timeout"
+          last_body=""
           while [ "$SECONDS" -lt "$deadline" ]; do
-            response="$(curl -s --max-time 10 "${RENDER_URL%/}/health" || true)"
-            echo "poll response: $response"
-            if echo "$response" | grep -Eq '"model_loaded"[[:space:]]*:[[:space:]]*true'; then
-              healthy="true"
-              break
+            attempt=$((attempt + 1))
+            http_status=$(curl -s -o /tmp/health_body.json -w "%{http_code}" \
+              --connect-timeout 10 --max-time 20 "${RENDER_URL}/health")
+            curl_exit=$?
+            body="$(cat /tmp/health_body.json 2>/dev/null || true)"
+            last_body="$body"
+
+            if [ "$curl_exit" -ne 0 ]; then
+              echo "attempt ${attempt}: curl failed (exit code ${curl_exit}) - unreachable or timed out"
+            else
+              model_loaded="unknown"
+              if echo "$body" | grep -Eq '"model_loaded"[[:space:]]*:[[:space:]]*true'; then
+                model_loaded="true"
+              elif echo "$body" | grep -Eq '"model_loaded"[[:space:]]*:[[:space:]]*false'; then
+                model_loaded="false"
+              fi
+              echo "attempt ${attempt}: http_status=${http_status} model_loaded=${model_loaded}"
+
+              if [ "$http_status" = "200" ] && [ "$model_loaded" = "true" ]; then
+                outcome="healthy"
+                break
+              fi
             fi
             sleep 15
           done
-          echo "healthy=$healthy" >> "$GITHUB_OUTPUT"
-          if [ "$healthy" != "true" ]; then
-            echo "::error::Render service at $RENDER_URL never reported model_loaded=true within 12 minutes."
-            echo "::error::Hint: if ghcr.io/${{ env.IMAGE_NAME }} is a PRIVATE GHCR package, Render's image pull fails - make the package public after its first publish."
+
+          echo "outcome=$outcome" >> "$GITHUB_OUTPUT"
+          if [ "$outcome" != "healthy" ]; then
+            echo "::error::Render never came up healthy within 12 minutes. Last response body: $last_body"
+            if echo "$last_body" | grep -q "load_error"; then
+              echo "::error::The service IS responding but the model failed to load - see the load_error field above (and Render's own logs for the full WARNING lines)."
+            elif [ -z "$last_body" ]; then
+              echo "::error::No response body at all - check RENDER_URL is correct (scheme + host, e.g. https://your-service.onrender.com) and that the service exists."
+            fi
             exit 1
           fi
 
       - name: Write job summary
         if: always()
         env:
-          RENDER_URL: ${{ vars.RENDER_URL }}
+          RENDER_URL: ${{ steps.check.outputs.render_url }}
         run: |
           {
             echo "### Deploy"
@@ -187,6 +231,7 @@ jobs:
               echo "Skipped: RENDER_DEPLOY_HOOK secret or RENDER_URL repository variable is not set."
             else
               echo "- Live URL: ${RENDER_URL}"
-              echo "- Health result: ${{ steps.poll.outputs.healthy == 'true' && 'healthy (model_loaded=true)' || 'NOT healthy' }}"
+              echo "- Image deployed: \`${{ needs.build-and-push.outputs.image_ref }}\`"
+              echo "- Health result: ${{ steps.poll.outputs.outcome == 'healthy' && 'healthy (HTTP 200, model_loaded=true)' || 'NOT healthy' }}"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
