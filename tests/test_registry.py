@@ -252,6 +252,93 @@ def test_fetch_wandb_artifact_refuses_when_alias_missing_on_artifact(monkeypatch
     assert result is None
 
 
+def test_fetch_wandb_artifact_logs_warning_for_bad_credentials(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Bad/missing credentials: ensure_wandb_login() returns False. Must
+    return None (never raise) and log a WARNING explaining why, instead of
+    silently vanishing."""
+    from src.models.registry import _fetch_wandb_artifact_joblib
+
+    monkeypatch.setattr("src.models.registry.ensure_wandb_login", lambda: False)
+
+    with caplog.at_level("WARNING", logger="src.models.registry"):
+        result = _fetch_wandb_artifact_joblib("production", "workspace", "project")
+
+    assert result is None
+    assert any("no W&B login available" in r.message for r in caplog.records)
+
+
+def test_fetch_wandb_artifact_logs_warning_for_host_unreachable(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Host unreachable: api.artifact() raises a connection-style error on
+    both the primary and fallback lookup. Must return None and log the
+    exception class and message (redacted)."""
+    from src.models.registry import _fetch_wandb_artifact_joblib
+
+    class FakeApi:
+        def artifact(self, path):
+            raise ConnectionError("Failed to establish a new connection: [Errno -2] Name or service not known")
+
+    monkeypatch.setattr("src.models.registry.ensure_wandb_login", lambda: True)
+    monkeypatch.setattr("src.models.registry.wandb.Api", FakeApi)
+
+    with caplog.at_level("WARNING", logger="src.models.registry"):
+        result = _fetch_wandb_artifact_joblib("production", "workspace", "project")
+
+    assert result is None
+    assert any("ConnectionError" in r.message for r in caplog.records)
+
+
+def test_fetch_wandb_artifact_logs_warning_for_entity_or_collection_not_found(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """Entity or collection not found: api.artifact() raises a 'not found'
+    style error on both lookup forms. Must return None and log it."""
+    from src.models.registry import _fetch_wandb_artifact_joblib
+
+    class FakeApi:
+        def artifact(self, path):
+            raise ValueError(f"artifact '{path}' not found")
+
+    monkeypatch.setattr("src.models.registry.ensure_wandb_login", lambda: True)
+    monkeypatch.setattr("src.models.registry.wandb.Api", FakeApi)
+
+    with caplog.at_level("WARNING", logger="src.models.registry"):
+        result = _fetch_wandb_artifact_joblib("production", "bad-workspace", "bad-project")
+
+    assert result is None
+    assert any("not found" in r.message for r in caplog.records)
+
+
+def test_fetch_wandb_artifact_never_logs_the_api_key_value(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    """If an underlying exception message happened to contain the raw
+    WANDB_API_KEY value (e.g. echoed back by a provider error), the logged
+    warning must never contain that raw value."""
+    from src.models.registry import _fetch_wandb_artifact_joblib
+
+    fake_key = "wandb_v1_" + "x" * 60
+    monkeypatch.setenv("WANDB_API_KEY", fake_key)
+
+    class FakeApi:
+        def artifact(self, path):
+            raise RuntimeError(f"authentication failed for key {fake_key}")
+
+    monkeypatch.setattr("src.models.registry.ensure_wandb_login", lambda: True)
+    monkeypatch.setattr("src.models.registry.wandb.Api", FakeApi)
+
+    with caplog.at_level("WARNING", logger="src.models.registry"):
+        result = _fetch_wandb_artifact_joblib("production", "workspace", "project")
+
+    assert result is None
+    all_messages = " ".join(r.message for r in caplog.records)
+    assert fake_key not in all_messages
+    assert "REDACTED" in all_messages
+
+
 def test_load_model_production_raises_clear_error_when_remote_also_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, dummy_spec_path: Path
 ):
