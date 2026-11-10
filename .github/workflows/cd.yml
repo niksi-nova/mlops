@@ -22,6 +22,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      image_ref: ${{ steps.image_ref.outputs.value }}
     steps:
       - uses: actions/checkout@v4
 
@@ -85,6 +87,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Compute this run's image reference
+        id: image_ref
+        # Matches the `type=sha,format=short` tag above (sha-<7-char-short-sha>)
+        # without depending on which of metadata-action's multiple tags its
+        # single `version` output happens to pick.
+        run: |
+          short_sha="$(echo "${{ github.sha }}" | cut -c1-7)"
+          echo "value=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${short_sha}" >> "$GITHUB_OUTPUT"
+
       - name: Write job summary
         run: |
           {
@@ -92,4 +103,90 @@ jobs:
             echo
             echo "- Tags: \`${{ steps.meta.outputs.tags }}\`"
             echo "- Digest: \`${{ steps.build.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check deploy configuration
+        id: check
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ] || [ -z "${{ vars.RENDER_URL }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping deploy: repository secret RENDER_DEPLOY_HOOK or repository variable RENDER_URL is not set."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Render deploy hook
+        id: trigger
+        if: steps.check.outputs.configured == 'true'
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          IMAGE_REF: ${{ needs.build-and-push.outputs.image_ref }}
+        run: |
+          set +x
+          # Render deploy hooks for image-backed services accept an imgURL
+          # query parameter to deploy a specific tag/digest instead of the
+          # service's default image reference (see
+          # https://render.com/docs/deploy-hooks). Render's docs don't show
+          # a fully worked encoded example, so this uses standard percent-
+          # encoding of the complete image reference. The hook URL may
+          # already carry its own "key" query parameter, so append with
+          # "&" if a "?" is already present, "?" otherwise. The hook URL
+          # itself is never echoed or logged.
+          encoded_img="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$IMAGE_REF")"
+          case "$RENDER_DEPLOY_HOOK" in
+            *"?"*) sep="&" ;;
+            *) sep="?" ;;
+          esac
+          full_url="${RENDER_DEPLOY_HOOK}${sep}imgURL=${encoded_img}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$full_url")
+          echo "Render deploy hook HTTP status: $status"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Render deploy hook returned HTTP $status"
+            exit 1
+          fi
+
+      - name: Poll Render for a healthy deploy
+        id: poll
+        if: steps.check.outputs.configured == 'true'
+        env:
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          # A sleeping free-tier instance takes about a minute to wake up;
+          # poll for up to 12 minutes total.
+          deadline=$((SECONDS + 720))
+          healthy="false"
+          while [ "$SECONDS" -lt "$deadline" ]; do
+            response="$(curl -s --max-time 10 "${RENDER_URL%/}/health" || true)"
+            echo "poll response: $response"
+            if echo "$response" | grep -Eq '"model_loaded"[[:space:]]*:[[:space:]]*true'; then
+              healthy="true"
+              break
+            fi
+            sleep 15
+          done
+          echo "healthy=$healthy" >> "$GITHUB_OUTPUT"
+          if [ "$healthy" != "true" ]; then
+            echo "::error::Render service at $RENDER_URL never reported model_loaded=true within 12 minutes."
+            echo "::error::Hint: if ghcr.io/${{ env.IMAGE_NAME }} is a PRIVATE GHCR package, Render's image pull fails - make the package public after its first publish."
+            exit 1
+          fi
+
+      - name: Write job summary
+        if: always()
+        env:
+          RENDER_URL: ${{ vars.RENDER_URL }}
+        run: |
+          {
+            echo "### Deploy"
+            if [ "${{ steps.check.outputs.configured }}" != "true" ]; then
+              echo "Skipped: RENDER_DEPLOY_HOOK secret or RENDER_URL repository variable is not set."
+            else
+              echo "- Live URL: ${RENDER_URL}"
+              echo "- Health result: ${{ steps.poll.outputs.healthy == 'true' && 'healthy (model_loaded=true)' || 'NOT healthy' }}"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
