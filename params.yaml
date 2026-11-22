@@ -67,3 +67,12 @@ quality_gate:
   min_slice_samples: 100
   max_slice_mae_ratio: 1.8
   max_prev_bus_drop_s: 15.0
+
+drift:
+  psi_warn: 0.1
+  psi_alert: 0.25
+  ks_p_value: 0.01
+  mae_degradation_pct_alert: 15.0
+  window_size: 5000
+  n_bins: 10
+  seed: 42
