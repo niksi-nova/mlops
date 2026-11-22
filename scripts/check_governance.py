@@ -59,7 +59,8 @@ def scan_for_secrets(root_dir: Path) -> tuple[bool, str]:
     for path in root_dir.rglob("*"):
         if not path.is_file():
             continue
-        if any(part in excluded_dirs for part in path.parts):
+        rel_parts = path.relative_to(root_dir).parts[:-1]
+        if any(part in excluded_dirs for part in rel_parts):
             continue
         if path.suffix not in {".py", ".yaml", ".yml", ".json", ".md", ".toml", ".txt"}:
             continue
