@@ -76,3 +76,10 @@ drift:
   window_size: 5000
   n_bins: 10
   seed: 42
+  ks_stat_min: 0.1
+  mae_degradation_pct_warn: 7.5
+  retrain_consecutive_alert_windows: 2
+  window_days: 2
+  exclude_features:
+    - relative_weekday
+    - te_vehicle

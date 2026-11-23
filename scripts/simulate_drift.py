@@ -41,14 +41,14 @@ def load_params():
         return yaml.safe_load(f)["drift"]
 
 
-def load_stream(window_size):
-    """Real test split, time-ordered, cut into full windows."""
+def load_stream(window_days):
+    """Real test split, time-ordered, cut into windows of whole days."""
     df = load_split("test")
     df = df.sort_values(["day_index", "minute_of_day", "trip_id"], kind="stable")
     df = df.reset_index(drop=True)
-    n_windows = len(df) // window_size
-    df = df.iloc[: n_windows * window_size].copy()
-    df["window_id"] = np.arange(len(df)) // window_size
+    day0 = int(df["day_index"].min())
+    df["window_id"] = (df["day_index"] - day0) // int(window_days)
+    n_windows = int(df["window_id"].max()) + 1
     return df, n_windows
 
 
@@ -149,7 +149,7 @@ def build_scenario(name, base=None, n_windows=None, params=None):
         raise ValueError("unknown scenario: " + name)
     params = params or load_params()
     if base is None:
-        base, n_windows = load_stream(params["window_size"])
+        base, n_windows = load_stream(params["window_days"])
     seed = int(params["seed"]) + SCENARIOS.index(name)
     rng = np.random.default_rng(seed)
     df = base.copy()
@@ -186,8 +186,8 @@ def main():
                     help="write data/simulated/<scenario>.parquet (not for git)")
     args = ap.parse_args()
     params = load_params()
-    base, n_windows = load_stream(params["window_size"])
-    print("stream rows: %d, windows: %d x %d" % (len(base), n_windows, params["window_size"]))
+    base, n_windows = load_stream(params["window_days"])
+    print("stream rows: %d, windows: %d x %d days" % (len(base), n_windows, params["window_days"]))
     names = SCENARIOS if args.scenario == "all" else [args.scenario]
     for name in names:
         df, info = build_scenario(name, base, n_windows, params)
