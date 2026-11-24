@@ -59,7 +59,7 @@ def intensity_per_window(scenario, n_windows):
     if scenario == "clean_test":
         return np.zeros(n_windows)
     if scenario == "gradual_drift":
-        return np.clip((w - onset + 1) / max(n_windows - onset, 1), 0, 1)
+        return np.clip((w - onset) / max(n_windows - 1 - onset, 1), 0, 1)
     return (w >= onset).astype(float)
 
 

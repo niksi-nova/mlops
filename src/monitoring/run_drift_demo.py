@@ -155,6 +155,10 @@ def main():
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(render_html(report))
     print("wrote", html_path)
+    from src.monitoring.wandb_log import log_to_wandb
+    url = log_to_wandb(report, html_path)
+    if url:
+        print("W&B run:", url)
 
 
 if __name__ == "__main__":

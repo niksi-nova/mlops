@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-24T19:33:45Z",
+  "generated_at": "2026-11-24T19:59:47Z",
   "simulated": true,
   "disclaimer": "Scenarios marked induced=true are SIMULATED perturbations of real test-day data (days 77-92). They are not real production drift.",
   "reference": {
@@ -8348,7 +8348,7 @@
         "seed": 46
       },
       "status": "ALERT",
-      "first_alert_window": "w4",
+      "first_alert_window": "w6",
       "retrain_recommended": true,
       "windows": [
         {
@@ -9108,24 +9108,20 @@
           "window": "w4",
           "days": "83-84",
           "n": 18205,
-          "mae": 36.0089,
-          "mae_degradation_pct": 17.676,
-          "max_psi": 0.064025,
-          "drifted_features": [
-            "prev_bus_tt_s",
-            "prev3_median_tt_s",
-            "own_prev_segment_tt_s"
-          ],
+          "mae": 33.4635,
+          "mae_degradation_pct": 9.358,
+          "max_psi": 0.045716,
+          "drifted_features": [],
           "target": {
-            "mean_s": 137.052,
-            "psi": 0.026127
+            "mean_s": 129.294,
+            "psi": 0.008127
           },
           "prediction": {
-            "mean_s": 119.506,
-            "psi": 0.012109
+            "mean_s": 116.147,
+            "psi": 0.007217
           },
           "has_prev_bus_share": 0.9627,
-          "status": "ALERT",
+          "status": "WARNING",
           "features": [
             {
               "feature": "from_node",
@@ -9241,21 +9237,21 @@
               "feature": "prev_bus_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.025608,
-              "ks_stat": 0.110571,
-              "ks_p_value": 0.0,
+              "psi": 0.00685,
+              "ks_stat": 0.026019,
+              "ks_p_value": 2.7848e-08,
               "chi2_p_value": null,
-              "status": "ALERT"
+              "status": "OK"
             },
             {
               "feature": "prev3_median_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.025136,
-              "ks_stat": 0.118181,
-              "ks_p_value": 0.0,
+              "psi": 0.008856,
+              "ks_stat": 0.029087,
+              "ks_p_value": 3.04e-10,
               "chi2_p_value": null,
-              "status": "ALERT"
+              "status": "OK"
             },
             {
               "feature": "headway_s",
@@ -9291,11 +9287,11 @@
               "feature": "own_prev_segment_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.064025,
-              "ks_stat": 0.112111,
-              "ks_p_value": 0.0,
+              "psi": 0.008142,
+              "ks_stat": 0.030426,
+              "ks_p_value": 3.6e-11,
               "chi2_p_value": null,
-              "status": "ALERT"
+              "status": "OK"
             },
             {
               "feature": "own_prev_segment_ratio",
@@ -9363,22 +9359,20 @@
           "window": "w5",
           "days": "85-86",
           "n": 18464,
-          "mae": 34.6096,
-          "mae_degradation_pct": 13.103,
-          "max_psi": 0.273731,
-          "drifted_features": [
-            "prev_bus_tt_s"
-          ],
+          "mae": 32.6666,
+          "mae_degradation_pct": 6.753,
+          "max_psi": 0.087616,
+          "drifted_features": [],
           "target": {
-            "mean_s": 131.359,
-            "psi": 0.052481
+            "mean_s": 126.082,
+            "psi": 0.017398
           },
           "prediction": {
-            "mean_s": 113.003,
-            "psi": 0.003849
+            "mean_s": 111.4,
+            "psi": 0.00351
           },
           "has_prev_bus_share": 0.9585,
-          "status": "ALERT",
+          "status": "OK",
           "features": [
             {
               "feature": "from_node",
@@ -9494,21 +9488,21 @@
               "feature": "prev_bus_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.273731,
-              "ks_stat": 0.087292,
+              "psi": 0.040001,
+              "ks_stat": 0.071276,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
-              "status": "ALERT"
+              "status": "OK"
             },
             {
               "feature": "prev3_median_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.249052,
-              "ks_stat": 0.081916,
+              "psi": 0.039657,
+              "ks_stat": 0.074068,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
-              "status": "WARNING"
+              "status": "OK"
             },
             {
               "feature": "headway_s",
@@ -9544,8 +9538,8 @@
               "feature": "own_prev_segment_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.09871,
-              "ks_stat": 0.084652,
+              "psi": 0.041384,
+              "ks_stat": 0.073109,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "OK"
@@ -9616,21 +9610,21 @@
           "window": "w6",
           "days": "87-88",
           "n": 19430,
-          "mae": 38.6651,
-          "mae_degradation_pct": 26.356,
-          "max_psi": 0.565127,
+          "mae": 37.1015,
+          "mae_degradation_pct": 21.247,
+          "max_psi": 0.51879,
           "drifted_features": [
             "prev_bus_tt_s",
             "prev3_median_tt_s",
             "own_prev_segment_tt_s"
           ],
           "target": {
-            "mean_s": 147.152,
-            "psi": 0.384044
+            "mean_s": 143.411,
+            "psi": 0.068337
           },
           "prediction": {
-            "mean_s": 124.326,
-            "psi": 0.027411
+            "mean_s": 122.785,
+            "psi": 0.020976
           },
           "has_prev_bus_share": 0.9626,
           "status": "ALERT",
@@ -9749,8 +9743,8 @@
               "feature": "prev_bus_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.546032,
-              "ks_stat": 0.200876,
+              "psi": 0.51879,
+              "ks_stat": 0.1711,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -9759,8 +9753,8 @@
               "feature": "prev3_median_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.499679,
-              "ks_stat": 0.209692,
+              "psi": 0.496126,
+              "ks_stat": 0.173653,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -9799,8 +9793,8 @@
               "feature": "own_prev_segment_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.565127,
-              "ks_stat": 0.199723,
+              "psi": 0.513466,
+              "ks_stat": 0.166207,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -9871,21 +9865,21 @@
           "window": "w7",
           "days": "89-90",
           "n": 20836,
-          "mae": 41.194,
-          "mae_degradation_pct": 34.621,
-          "max_psi": 0.603861,
+          "mae": 40.3059,
+          "mae_degradation_pct": 31.719,
+          "max_psi": 0.596997,
           "drifted_features": [
             "prev_bus_tt_s",
             "prev3_median_tt_s",
             "own_prev_segment_tt_s"
           ],
           "target": {
-            "mean_s": 149.609,
-            "psi": 0.544625
+            "mean_s": 147.8,
+            "psi": 0.526701
           },
           "prediction": {
-            "mean_s": 123.103,
-            "psi": 0.025875
+            "mean_s": 122.326,
+            "psi": 0.023145
           },
           "has_prev_bus_share": 0.9633,
           "status": "ALERT",
@@ -10004,8 +9998,8 @@
               "feature": "prev_bus_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.594394,
-              "ks_stat": 0.198948,
+              "psi": 0.573278,
+              "ks_stat": 0.198852,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -10014,8 +10008,8 @@
               "feature": "prev3_median_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.495341,
-              "ks_stat": 0.211327,
+              "psi": 0.491578,
+              "ks_stat": 0.210415,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -10054,8 +10048,8 @@
               "feature": "own_prev_segment_tt_s",
               "group": "real-time",
               "type": "numeric",
-              "psi": 0.603861,
-              "ks_stat": 0.195175,
+              "psi": 0.596997,
+              "ks_stat": 0.195047,
               "ks_p_value": 0.0,
               "chi2_p_value": null,
               "status": "ALERT"
@@ -10381,20 +10375,20 @@
       "top_drifted_features": [
         {
           "feature": "own_prev_segment_tt_s",
-          "psi": 0.603861,
-          "ks_stat": 0.195175,
+          "psi": 0.596997,
+          "ks_stat": 0.195047,
           "peak_window": "w7"
         },
         {
           "feature": "prev_bus_tt_s",
-          "psi": 0.594394,
-          "ks_stat": 0.198948,
-          "peak_window": "w7"
+          "psi": 0.573278,
+          "ks_stat": 0.198852,
+          "peak_window": "w8"
         },
         {
           "feature": "prev3_median_tt_s",
-          "psi": 0.495341,
-          "ks_stat": 0.211327,
+          "psi": 0.491578,
+          "ks_stat": 0.210415,
           "peak_window": "w8"
         },
         {
