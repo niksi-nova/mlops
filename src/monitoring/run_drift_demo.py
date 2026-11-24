@@ -150,6 +150,11 @@ def main():
         json.dump(report, f, indent=2, allow_nan=False)
     print("summary:", report["summary"])
     print("wrote", args.out)
+    from src.monitoring.html_report import render_html
+    html_path = os.path.splitext(args.out)[0] + ".html"
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(render_html(report))
+    print("wrote", html_path)
 
 
 if __name__ == "__main__":
