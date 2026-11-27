@@ -35,13 +35,17 @@ MODELS_DIR = PROJECT_ROOT / "models"
 RNG = np.random.RandomState(42)
 
 
-def _git_short_sha() -> str:
+def _snapshot_revision() -> tuple[str, str]:
+    """Use the source revision date so rebuilding the same inputs is stable."""
     try:
-        return subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=PROJECT_ROOT, capture_output=True, text=True, check=True
-        ).stdout.strip()
-    except Exception:
-        return "unknown"
+        revision = subprocess.check_output(
+            ["git", "show", "-s", "--format=%h %cs", "HEAD"], cwd=PROJECT_ROOT,
+            text=True, stderr=subprocess.DEVNULL,
+        ).strip()
+        commit, date = revision.split()
+        return commit, date
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return "unknown", "unknown"
 
 
 def _load_json(path: Path) -> dict:
@@ -67,9 +71,10 @@ def _clean_row(row: dict, feature_cols: list[str]) -> dict:
 
 
 def build_meta(feature_spec: dict) -> dict:
+    commit, date = _snapshot_revision()
     return {
-        "snapshot_built": pd.Timestamp.now("UTC").strftime("%Y-%m-%d"),
-        "git_commit": _git_short_sha(),
+        "snapshot_built": date,
+        "git_commit": commit,
         "dataset_version": feature_spec.get("params", {}).get("dataset_version", "delhi-data-v2"),
         "n_features": len(feature_spec["features"]),
         "categorical_features": feature_spec["categorical_features"],
@@ -372,6 +377,59 @@ def build_golden_time_features(peak_am: list[int], peak_pm: list[int]) -> list[d
     return rows
 
 
+DASHBOARD_REPORTS = (
+    "drift_report", "version_ledger", "governance_status", "quality_gate",
+    "train_metrics", "test_metrics", "model_registry", "production_approvals",
+)
+
+
+def build_dashboard():
+    """Package checked-in evidence only. No network, credentials or runtime environment."""
+    snapshots = {name: _load_json(REPORTS / f"{name}.json") for name in DASHBOARD_REPORTS}
+    registry = snapshots["model_registry"]
+    snapshots["model_registry"] = {key: registry[key] for key in (
+        "mode", "project", "collection", "model_id", "active_aliases", "artifact_version",
+    )}
+    snapshots["production_approvals"] = [
+        {key: record[key] for key in ("status", "promoted_version", "timestamp")}
+        for record in snapshots["production_approvals"]
+    ]
+    # Only publish the control fields displayed by the dashboard. Scanner detail
+    # can include paths or fragments of a finding when a control fails.
+    governance = snapshots["governance_status"]
+    governance["controls"] = [
+        {key: control[key] for key in ("id", "name", "risk", "status", "evidence")}
+        for control in governance["controls"]
+    ]
+    version = snapshots["version_ledger"]
+    gate = snapshots["quality_gate"]
+    controls = {row["id"]: row for row in snapshots["governance_status"]["controls"]}
+    validation = _load_json(REPORTS / "validation_report.json")
+    features = _load_json(REPORTS / "featurize_report.json")
+    raw = yaml.safe_load((PROJECT_ROOT / "data/raw.dvc").read_text())["outs"][0]
+    cd = (PROJECT_ROOT / ".github/workflows/cd.yml").read_text()
+    production = registry["active_aliases"].get("production")
+    approved = any(r["status"] == "APPROVED" and r["promoted_version"] == production
+                   for r in snapshots["production_approvals"])
+    stages = [
+        ("Data", "DVC · DagsHub", "data/raw.dvc", f'{raw["nfiles"]} files' if raw.get("md5") else "Missing hash"),
+        ("Validate", "Pandera · pytest", "reports/validation_report.json", validation["status"].upper()),
+        ("Features", "Feature pipeline", "reports/featurize_report.json", f'{features["n_features"]} inputs'),
+        ("Train", "Model comparison", "reports/train_metrics.json", f'{len(snapshots["train_metrics"]["models"])} models'),
+        ("Track", "W&B", "reports/version_ledger.json", "Live snapshot" if version["source"] == "wandb" else "Local snapshot"),
+        ("Quality gate", "Release checks", "reports/quality_gate.json", f'{sum(c["passed"] for c in gate["checks"].values())}/{len(gate["checks"])} passed'),
+        ("Register", "Model registry", "reports/model_registry.json", production or "Unassigned"),
+        ("Human approval", "Production record", "reports/production_approvals.json", "Approved" if approved else "Unconfirmed"),
+        ("Containerize", "Docker · GHCR", "Dockerfile", "Configured" if (PROJECT_ROOT / "Dockerfile").is_file() and version["layers"]["image"]["registry"] else "Missing"),
+        ("CI/CD", "GitHub Actions", ".github/workflows/ci.yml", "Configured" if controls["G06"]["status"] == "PASS" else controls["G06"]["status"]),
+        ("Deploy", "Render", ".github/workflows/cd.yml", "Configured" if "RENDER_DEPLOY_HOOK" in cd else "Missing"),
+        ("Monitor", "Drift replay", "reports/drift_report.json", f'{snapshots["drift_report"]["summary"]["n_alert"]} scenarios alert'),
+    ]
+    snapshots["stages"] = [dict(name=name, tool=tool, evidence=path, status=status)
+                           for name, tool, path, status in stages]
+    return snapshots
+
+
 def main() -> int:
     DATA_OUT.mkdir(parents=True, exist_ok=True)
 
@@ -397,6 +455,7 @@ def main() -> int:
 
     outputs = {
         "meta.json": build_meta(feature_spec),
+        "dashboard.json": build_dashboard(),
         "routes.json": routes_meta,
         **lookup_files,
         "presets.json": build_presets(test_df, feature_cols),
@@ -418,7 +477,7 @@ def main() -> int:
         path.write_text(text)
         size = len(text.encode())
         total_bytes += size
-        print(f"wrote {path.relative_to(PROJECT_ROOT)} ({size / 1024:.1f} KB)")
+        print(f"wrote {filename} ({size / 1024:.1f} KB)")
 
     print(f"total: {total_bytes / 1024:.1f} KB ({total_bytes / 1024 / 1024:.2f} MB)")
     return 0
