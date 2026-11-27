@@ -33,3 +33,7 @@ A window reaches ALERT if eligible max PSI, target PSI or prediction PSI reaches
 Reproduce the calculation with `uv run python -m src.monitoring.calibrate`. Score the validation period (days 62–76) and express each complete, non-overlapping two-day window’s MAE as a percentage change from the full validation MAE of 29.3348 s. Day 76 contributes to the baseline only. The seven window MAEs were 26.427, 27.876, 31.607, 30.974, 25.199, 29.327 and 30.398 s. Their mean percentage change was −1.7214%, with a sample standard deviation of 8.2195 percentage points. Warning uses mean plus two standard deviations and alert uses mean plus three, rounded to two decimals. Apply those fixed percentage limits to the demo’s existing test-period baseline of 30.60 s.
 
 Seven windows give a rough operating limit. They offer little information about the tails or seasonal patterns. Even the unperturbed monthly mean travel times change across the dataset (117.0, 118.2 and 121.7 s). The test-period baseline describes this retrospective demonstration. A live system needs a baseline frozen before monitoring starts, aligned predictions and delayed outcomes, and enough history to estimate its false-alarm rate.
+
+## Observed replay
+
+All eight control windows were OK. The first alerts for peak traffic, road works and GPS outage occurred in w4 (days 83–84). Gradual drift first alerted in w6 (days 87–88). Road works produced an isolated alert, below the consecutive-window retraining rule.
