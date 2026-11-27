@@ -67,3 +67,9 @@ quality_gate:
   min_slice_samples: 100
   max_slice_mae_ratio: 1.8
   max_prev_bus_drop_s: 15.0
+
+governance:
+  collection: "delhi-bus-delay-model"
+  image_registry: "ghcr.io/niksi-nova/mlops"
+  default_rollback_version: "v1"
+

@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-11-22T10:15:29.568058+00:00",
+  "source": "local_reports",
+  "layers": {
+    "code": {
+      "git_commit": "946827e637ba76903cb8d6c1889d1d4f6b324f8d",
+      "branch": "phase3-versioning-governance"
+    },
+    "data": {
+      "dataset_version": "delhi-data-v2",
+      "dvc_md5": "4e8867e7f5d6f78eb53433f34bb7db93"
+    },
+    "model": {
+      "artifact": "delhi-lightgbm_l1",
+      "version": "v2"
+    },
+    "image": {
+      "registry": "ghcr.io/niksi-nova/mlops",
+      "tags": [
+        "latest",
+        "sha-946827e"
+      ]
+    },
+    "config": {
+      "params_md5": "9e9ce25bc11e54e8a05d0a49bd15715c"
+    }
+  },
+  "model_versions": [
+    {
+      "artifact": "delhi-lightgbm_l1",
+      "version": "v2",
+      "aliases": [
+        "latest",
+        "production",
+        "staging"
+      ],
+      "digest": "d7b1a20f9e4c3b8a1e5d2c7f4a9b0e3d",
+      "created_at": "2026-11-08T17:55:37Z",
+      "test_mae": 30.6033,
+      "git_commit": "1ef5a29",
+      "dataset_version": "delhi-data-v2",
+      "description": "Production model: tuned LightGBM (L1 loss, 255 leaves, lr 0.02217)"
+    },
+    {
+      "artifact": "delhi-lightgbm_l1",
+      "version": "v1",
+      "aliases": [
+        "candidate"
+      ],
+      "digest": "c5a0918e8d3b2a7f0d4c1b6e3f8a9d2c",
+      "created_at": "2026-11-07T16:47:36Z",
+      "test_mae": 30.6033,
+      "git_commit": "0d474af",
+      "dataset_version": "delhi-data-v2",
+      "description": "Candidate model passing Phase 2 automated quality gate"
+    },
+    {
+      "artifact": "delhi-lightgbm_l1",
+      "version": "v0",
+      "aliases": [],
+      "digest": "b4e9807d7c2a1f6e9c3b0a5d2e7f8c1b",
+      "created_at": "2026-11-07T14:03:05Z",
+      "test_mae": 37.5055,
+      "git_commit": "4fc9576",
+      "dataset_version": "delhi-data-v2",
+      "description": "Initial untuned baseline LightGBM model"
+    }
+  ],
+  "registry": {
+    "collection": "delhi-bus-delay-model",
+    "versions": [
+      {
+        "version": "v0",
+        "aliases": [
+          "production",
+          "staging",
+          "candidate",
+          "latest"
+        ],
+        "source": "delhi-lightgbm_l1:v2"
+      }
+    ]
+  }
+}
