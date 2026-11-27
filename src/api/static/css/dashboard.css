@@ -36,3 +36,15 @@
   .dashboard { padding: 1rem .8rem 2.5rem; }
   .dashboard .stops { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+.dashboard h3 { margin-top: 1.4rem; }
+.bar-row { display: grid; grid-template-columns: minmax(8rem,1fr) minmax(6rem,2fr) 8rem; gap: .8rem; align-items: center; border-bottom: var(--rule-faint); padding: .3rem 0; }
+.bar-row svg { height: 1.55rem; }
+.bar-row .num { text-align: right; font-size: .9rem; }
+.legend .key { display: inline-block; width: 1.1rem; height: .55rem; }
+.key.val { background: var(--ink); }
+.key.test { background: var(--dtc-green); }
+@media(max-width: 620px) {
+  .bar-row { grid-template-columns: 1fr auto; gap: .2rem .5rem; padding: .5rem 0; }
+  .bar-row svg { grid-column: 1 / -1; grid-row: 2; }
+}
