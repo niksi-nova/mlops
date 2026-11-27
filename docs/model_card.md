@@ -12,7 +12,7 @@ Following the standard model card reporting framework ([Mitchell et al., 2019](h
 * **Hyperparameters**:
   - `num_leaves`: 255
   - `learning_rate`: 0.02217
-  - `n_estimators`: 3000 (with early stopping at round 100)
+  - `n_estimators`: 3000 (with early-stopping patience of 100 rounds)
   - `subsample`: 0.879
   - `colsample_bytree`: 0.829
   - `reg_lambda`: 0.0265
@@ -45,8 +45,8 @@ Following the standard model card reporting framework ([Mitchell et al., 2019](h
 * **Dataset Identifier**: `delhi-data-v2` (Versioned via DVC on DagsHub)
 * **Time Span**: 92 continuous days of public transit operations in Delhi.
 * **Temporal Partitions**:
-  - **Training Set**: Days 1–61 ($N = 491,856$ transitions)
-  - **Validation Set**: Days 62–76 ($N = 122,964$ transitions)
+  - **Training Set**: Days 1–61 ($N = 606,967$ transitions)
+  - **Validation Set**: Days 62–76 ($N = 140,815$ transitions)
   - **Test Set (Held-Out)**: Days 77–92 ($N = 153,705$ transitions)
 * **Target Variable**: `travel_time_s` (Continuous duration in seconds to traverse a stop-to-stop segment).
 
@@ -54,7 +54,7 @@ Following the standard model card reporting framework ([Mitchell et al., 2019](h
 * **Categorical (4)**: `route` (425, 534), `direction` (up, down), `segment_id`, `relative_weekday` (0–6).
 * **Temporal (4)**: `hour` (0–23), `minute_of_day`, `hour_sin`, `hour_cos`.
 * **Spatial & Position (4)**: `from_node`, `nodes_spanned`, `route_position`, `stops_into_trip`.
-* **Traffic & Congestion Dynamics (13)**: `is_peak_am`, `is_peak_pm`, `prev_bus_tt_s`, `prev3_median_tt_s`, `headway_s`, `n_buses_recent`, `has_prev_bus`, `own_prev_segment_tt_s`, `own_prev3_median_tt_s`, `elapsed_trip_s`, `cum_distance_km`, `delay_recent_buses_s`, `delay_own_prev_segment_s`.
+* **Traffic & Congestion Dynamics (13)**: `is_peak_am`, `is_peak_pm`, `prev_bus_tt_s`, `prev3_median_tt_s`, `headway_s`, `n_buses_recent`, `has_prev_bus`, `own_prev_segment_tt_s`, `own_prev_segment_ratio`, `elapsed_trip_s`, `typical_segment_s`, `typical_segment_hour_s`, `te_vehicle`.
 
 ---
 
@@ -67,8 +67,8 @@ Evaluated on the held-out Month 3 test partition ($N = 153,705$ segments):
 | **Test MAE** | **30.60 s** | 38.22 s | 41.29 s | **+19.93%** | **PASS** ($\le 35.0$s) |
 | **Validation MAE**| **29.33 s** | 37.73 s | 38.00 s | — | — |
 | **Generalization Gap** | **4.32%** | — | — | — | **PASS** ($\le 10.0\%$) |
-| **Within-60s Accuracy**| **89.35%** | 86.43% | 86.93% | +2.92% | **PASS** ($\ge 85.0\%$) |
-| **Median Warm Latency** | **15.17 ms** | — | — | — | **PASS** ($\le 50.0$ ms) |
+| **Within-60s Accuracy**| **89.35%** | 86.71% | 86.16% | +2.65 percentage points | **PASS** ($\ge 85.0\%$) |
+| **Median Warm Latency** | **15.70 ms** (p95 18.00 ms) | — | — | — | **PASS** ($\le 50.0$ ms) |
 
 ---
 
@@ -77,16 +77,16 @@ Evaluated on the held-out Month 3 test partition ($N = 153,705$ segments):
 Source: `reports/quality_gate.json`
 
 ### 5.1 Hourly Performance & Congestion Slices
-* Evaluated across 18 operational daytime and evening hours (6:00 to 23:00).
-* Off-peak morning hours (e.g. 06:00) demonstrate best-case MAE of **22.45 s**.
-* Peak evening congestion (18:00–20:00) exhibits elevated MAE of **44.57 s**.
+* Evaluated across 18 observed hours (04:00 through 21:59).
+* At 05:00, MAE was **11.71 s**, the lowest among hours with at least 100 observations. At 06:00 it was **15.08 s**.
+* At 19:00, MAE reached **44.57 s**, the highest among hours with at least 100 observations.
 * Max hourly slice ratio: **1.46** (well within the $\le 1.8$ threshold).
 * **Low-Volume Note**: Hour 4 recorded only 1 sample ($N=1$); it was cleanly flagged as `INSUFFICIENT_DATA` rather than skewing operational statistics.
 
 ### 5.2 Cold-Start Resilience (`has_prev_bus`)
 * **Warm Segments (`has_prev_bus = 1`)**: $N = 147,917$ (96.2% of data), **MAE: 29.80 s**.
 * **Cold-Start Segments (`has_prev_bus = 0`)**: $N = 5,788$ (3.8% of data), **MAE: 51.20 s**.
-* Slice error ratio: **1.67** (satisfies the $\le 1.8$ quality threshold).
+* Cold-start MAE divided by overall MAE: **1.67** (satisfies the $\le 1.8$ quality threshold).
 
 ### 5.3 Multi-Node Segment Transitions
 * Single-node standard segments (`nodes_spanned = 1`): $N = 146,862$, **MAE: 28.64 s**.
@@ -97,7 +97,7 @@ Source: `reports/quality_gate.json`
 * Medium segments (60–120s): **MAE: 15.96 s** ($N = 54,882$).
 * Congested segments (120–300s): **MAE: 34.80 s** ($N = 44,875$).
 * Extreme congestion tail ($> 600$s): **MAE: 397.86 s** ($N = 2,474$, 1.6% of rows).
-* Bound protection: All predictions are clipped to $[1.0, 1800.0]$ seconds to prevent negative or infinite values.
+* Bound protection: The quality gate checked 200 predictions for finite values in $[1, 1800]$ seconds.
 
 ---
 
@@ -106,7 +106,7 @@ Source: `reports/quality_gate.json`
 1. **Route Coverage Boundary**: Calibration is restricted to routes 425 and 534 in South/Central Delhi. It cannot be applied to Northern or Eastern peripheral routes without retraining.
 2. **Missing Spatial Coordinates**: The dataset lacks raw GPS latitude/longitude. Consequently, spatial interactions with cross-traffic, traffic signals, and road elevation cannot be explicitly engineered.
 3. **Calendar Date Blindness**: The dataset spans day indices (1–92) without Gregorian dates. National holidays (Republic Day, Diwali, Eid), extreme rain events, or school closures cannot be explicitly represented.
-4. **Data Drift Sensitivity**: Analysis of daily MAE over the 3-month window indicates daily performance variance between 23.6s and 38.6s, demonstrating sensitivity to changing seasonal traffic patterns.
+4. **Data Drift Sensitivity**: Analysis of daily MAE over validation and test days 62–92 indicates daily performance variance between 23.6s and 38.6s, demonstrating sensitivity to changing seasonal traffic patterns.
 
 ---
 

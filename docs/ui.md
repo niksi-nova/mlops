@@ -38,7 +38,7 @@ License 1.1 — self-hosted as `.woff2` under `src/api/static/fonts/`
 `@fontsource/*` npm packages into a scratch directory outside the repo:
 
 ```bash
-mkdir /tmp/font-extract && cd /tmp/font-extract
+cd "$(mktemp -d)"
 npm pack @fontsource/bricolage-grotesque @fontsource/courier-prime @fontsource/ibm-plex-mono
 # extract each .tgz, copy files/*-latin-{400,700}-normal.woff2 into
 # src/api/static/fonts/, renamed <family>-<weight>.woff2
