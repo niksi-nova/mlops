@@ -35,3 +35,12 @@ def test_should_retrain_needs_consecutive_alerts():
     assert should_retrain(["OK", "ALERT", "ALERT"], 2) is True
     assert should_retrain(["ALERT", "OK", "ALERT"], 2) is False
     assert should_retrain(["ALERT"], 2) is False
+
+
+def test_false_positive_check_requires_an_ok_control():
+    from src.monitoring.report import build_summary
+
+    for status, expected in [("OK", "PASS"), ("WARNING", "FAIL"), ("ALERT", "FAIL")]:
+        control = {"name": "clean_test", "status": status, "retrain_recommended": False}
+        assert build_summary([control])["false_positive_check"] == expected
+    assert build_summary([])["false_positive_check"] == "FAIL"

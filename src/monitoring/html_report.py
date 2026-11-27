@@ -32,12 +32,12 @@ def render_html(rep):
     sm = rep.get("summary", {})
     out.append("<h2>Summary</h2><p>%s</p>" % e(", ".join("%s: %s" % (k, v) for k, v in sm.items())))
     for s in rep["scenarios"]:
-        out.append("<h2>%s %s</h2>" % (e(s.get("label", s["name"])), _badge(s["status"])))
+        out.append("<h2>%s %s</h2>" % (e(s["name"] + " · " + s.get("label", s["name"])), _badge(s["status"])))
         out.append("<p>%s<br>Induced (simulated): %s. First alert: %s. Retrain recommended: %s.</p>" % (
             e(s.get("description", "")), s["induced"], s.get("first_alert_window"),
             s.get("retrain_recommended")))
         out.append("<table><tr><th class='l'>Window</th><th>Days</th><th>n</th><th>MAE (s)</th>"
-                   "<th>MAE vs 30.60 (%)</th><th>Max PSI</th><th>No prev bus</th>"
+                   "<th>MAE vs 30.60 (%)</th><th>Max PSI</th><th>Has prev bus</th>"
                    "<th class='l'>Drifted features</th><th>Status</th></tr>")
         for w in s["windows"]:
             out.append("<tr><td class='l'>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"

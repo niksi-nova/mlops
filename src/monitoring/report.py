@@ -86,7 +86,7 @@ def top_drifted(windows, k=5):
         for f in w["features"]:
             if f["feature"] not in peak or f["psi"] > peak[f["feature"]][0]:
                 peak[f["feature"]] = (f["psi"], w["window"])
-    rows = sorted(worst["features"], key=lambda f: -f["psi"])[:k]
+    rows = sorted((f for f in worst["features"] if not f.get("alerting_excluded")), key=lambda f: -f["psi"])[:k]
     return [{"feature": f["feature"], "psi": f["psi"], "ks_stat": f["ks_stat"],
              "peak_window": peak[f["feature"]][1]} for f in rows]
 
@@ -94,7 +94,7 @@ def top_drifted(windows, k=5):
 def build_summary(scenarios) -> dict:
     sts = [s["status"] for s in scenarios]
     clean = [s for s in scenarios if s["name"] == "clean_test"]
-    fp_ok = bool(clean) and clean[0]["status"] != "ALERT" and not clean[0]["retrain_recommended"]
+    fp_ok = bool(clean) and clean[0]["status"] == "OK" and not clean[0]["retrain_recommended"]
     return {
         "n_scenarios": len(scenarios),
         "n_alert": sts.count("ALERT"),
@@ -145,7 +145,7 @@ def validate_report(rep: dict, n_features: int = 25) -> None:
                         errs.append("%s/%s: bad status %r" % (wn, f["feature"], f["status"]))
                     if f["type"] == "numeric" and f["chi2_p_value"] is not None:
                         errs.append("%s/%s: numeric needs chi2_p_value null" % (wn, f["feature"]))
-                    if f["type"] == "categorical" and (f["ks_stat"] is not None or f["ks_p_value"] is not None):
+                    if f["type"] == "categorical" and f["feature"] != "relative_weekday" and (f["ks_stat"] is not None or f["ks_p_value"] is not None):
                         errs.append("%s/%s: categorical needs ks fields null" % (wn, f["feature"]))
     if errs:
         raise ValueError("drift_report invalid:\n" + "\n".join(errs[:25]))

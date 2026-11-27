@@ -65,6 +65,10 @@ def feature_row(fname, fref, ctx, wdf, th):
         chi_p = chi2_categorical(fref["props"], wdf[fname])["p_value"]
         flagged = st.feature_flagged(psi, th["psi_alert"])  # categorical: PSI only
         ks_stat = ks_p = None
+        if fname == "relative_weekday":
+            # Ordered day codes permit a diagnostic KS; calendar mix is expected.
+            ks = ks_numeric(ctx["ref_sample"][fname], wdf[fname])
+            ks_stat, ks_p = ks["ks_stat"], ks["p_value"]
     return {"feature": fname, "group": rp.GROUPS[fname], "type": fref["type"],
             "psi": rp.r(psi), "ks_stat": rp.r(ks_stat), "ks_p_value": rp.r(ks_p, 12),
             "chi2_p_value": rp.r(chi_p, 12),
@@ -77,14 +81,17 @@ def run_scenario(name, base, n_windows, params, ctx, th):
     y = df["travel_time_s"].to_numpy()
     ref = ctx["ref"]
     windows = []
+    excluded = set(params.get("exclude_features", []))
     for w in range(n_windows):
         m = (df["window_id"] == w).to_numpy()
         wdf, wp, wy = df[m], preds[m], y[m]
         w_mae = mae(wy, wp)
         deg = mae_degradation_pct(w_mae, BASELINE_TEST_MAE)
-        excluded = set(params.get("exclude_features", []))
-        feats = [feature_row(f, fr, ctx, wdf, th) for f, fr in ref["features"].items() if f not in excluded]
-        max_psi = max(f["psi"] for f in feats)
+        feats = [feature_row(f, fr, ctx, wdf, th) for f, fr in ref["features"].items()]
+        for row in feats:
+            row["alerting_excluded"] = row["feature"] in excluded
+        eligible = [row for row in feats if not row["alerting_excluded"]]
+        max_psi = max(row["psi"] for row in eligible)
         t_psi = psi_numeric_ref(ref["target"], wy)
         p_psi = psi_numeric_ref(ref["prediction"], wp)
         status = st.window_status(
@@ -95,7 +102,7 @@ def run_scenario(name, base, n_windows, params, ctx, th):
             "window": "w%d" % (w + 1), "days": "%d-%d" % (d0, d1), "n": int(m.sum()),
             "mae": rp.r(w_mae, 4), "mae_degradation_pct": rp.r(deg, 3),
             "max_psi": rp.r(max_psi),
-            "drifted_features": [f["feature"] for f in feats if f["status"] == "ALERT"],
+            "drifted_features": [f["feature"] for f in eligible if f["status"] == "ALERT"],
             "target": {"mean_s": rp.r(wy.mean(), 3), "psi": rp.r(t_psi)},
             "prediction": {"mean_s": rp.r(wp.mean(), 3), "psi": rp.r(p_psi)},
             "has_prev_bus_share": rp.r(wdf["has_prev_bus"].mean(), 4),
@@ -144,7 +151,7 @@ def main():
                       "model_test_mae_s": BASELINE_TEST_MAE},
         "thresholds": th, "scenarios": scenarios, "summary": rp.build_summary(scenarios),
     }
-    rp.validate_report(report, n_features=25 - len(params.get("exclude_features", [])))
+    rp.validate_report(report)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, allow_nan=False)
@@ -155,10 +162,6 @@ def main():
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(render_html(report))
     print("wrote", html_path)
-    from src.monitoring.wandb_log import log_to_wandb
-    url = log_to_wandb(report, html_path)
-    if url:
-        print("W&B run:", url)
 
 
 if __name__ == "__main__":
