@@ -53,6 +53,7 @@ async function dashboard() {
     performancePanel();
     driftPanel();
     versionPanel();
+    governancePanel();
   } catch {
     byId("snapshot-error").textContent = "The dashboard evidence could not be loaded. Refresh to try again.";
   }
@@ -155,4 +156,27 @@ function versionPanel() {
   byId("collection").textContent = ledger.registry.collection;
   records(byId("aliases"), ["Collection version", "Aliases", "Source artifact"], ledger.registry.versions.map(v =>
     [v.version, v.aliases.join(", ") || "None", v.source]));
+}
+
+function controlEvidence(entry) {
+  if (entry.id === "G09") {
+    const link = element("a", entry.evidence);
+    link.href = repo + "/settings/branches";
+    return link;
+  }
+  const span = element("span");
+  for (const [i, path] of entry.evidence.split(", ").entries()) {
+    if (i) span.append(", ");
+    const file = path.startsWith(".gitignore ") ? ".gitignore" : path;
+    span.append(evidenceLink(file, path));
+  }
+  return span;
+}
+
+function governancePanel() {
+  const gov = evidence.governance_status;
+  byId("governance-counts").textContent = Object.entries(gov.summary)
+    .map(([status, count]) => count + " " + status.toUpperCase()).join(" · ");
+  records(byId("controls"), ["Control", "Risk", "Status", "Evidence"], gov.controls.map(c =>
+    [c.id + " · " + c.name, c.risk, chip(c.status), controlEvidence(c)]));
 }
