@@ -52,6 +52,7 @@ async function dashboard() {
     stages();
     performancePanel();
     driftPanel();
+    versionPanel();
   } catch {
     byId("snapshot-error").textContent = "The dashboard evidence could not be loaded. Refresh to try again.";
   }
@@ -140,4 +141,18 @@ function driftPanel() {
   }
   select.addEventListener("change", render);
   render();
+}
+
+function versionPanel() {
+  const ledger = evidence.version_ledger;
+  byId("version-source").textContent = ledger.source === "wandb"
+    ? "W&B snapshot · " + ledger.generated_at
+    : "Local ledger snapshot · " + ledger.generated_at + ". Offline aliases and digests are recorded examples and have no live W&B verification.";
+  records(byId("layers"), ["Layer", "Recorded identifiers"], Object.entries(ledger.layers).map(([key, values]) =>
+    [key, Object.entries(values).map(([field, value]) => field.replaceAll("_", " ") + " · " + (Array.isArray(value) ? value.join(", ") : value)).join(" / ")]));
+  records(byId("versions"), ["Artifact", "Version", "Aliases", "Digest"], ledger.model_versions.map(v =>
+    [v.artifact, v.version, v.aliases.join(", ") || "None", v.digest]));
+  byId("collection").textContent = ledger.registry.collection;
+  records(byId("aliases"), ["Collection version", "Aliases", "Source artifact"], ledger.registry.versions.map(v =>
+    [v.version, v.aliases.join(", ") || "None", v.source]));
 }
