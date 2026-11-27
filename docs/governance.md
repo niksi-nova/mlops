@@ -23,15 +23,15 @@ The governance model establishes clear segregation of duties across development,
 
 | Control ID | Control Name | Risk It Mitigates | Why We Need It | Evidence in Repository | Status |
 |---|---|---|---|---|---|
-| **C-01** | **Automated Model Quality Gate** | Deployment of underperforming, overfitted, or unstable models | Prevents regressions by enforcing 8 empirical performance thresholds before staging promotion | [`src/models/quality_gate.py`](file:///e:/mlops/src/models/quality_gate.py), [`params.yaml`](file:///e:/mlops/params.yaml) | **Implemented (PASS)** |
-| **C-02** | **Slice Fairness & Subgroup Evaluation** | Disproportionate performance degradation during night hours or cold-start scenarios | Protects commuter trust across diverse operating conditions; ensures model is reliable during off-peak and cold-start transitions | [`reports/quality_gate.json`](file:///e:/mlops/reports/quality_gate.json) (hourly and `has_prev_bus` checks) | **Implemented (PASS)** |
-| **C-03** | **Interactive Human Approval Gate** | Accidental, rogue, or automated production model releases | Enforces strict human accountability; ensures no automated tool can deploy weights directly to production | `promote_to_production()` in [`src/models/registry.py`](file:///e:/mlops/src/models/registry.py) | **Implemented (PASS)** |
-| **C-04** | **Immutable Audit Logging** | Unaudited model deployments, dispute over deployment authorization | Provides an unalterable forensic record of who authorized each production release, when, and why | [`reports/production_approvals.json`](file:///e:/mlops/reports/production_approvals.json), [`reports/model_registry.json`](file:///e:/mlops/reports/model_registry.json) | **Implemented (PASS)** |
-| **C-05** | **Test Isolation from Production State** | Unit tests polluting production registry or approval files | Prevents mock test inputs from contaminating live audit trails | `isolate_approval_history` autouse fixture in [`tests/test_registry.py`](file:///e:/mlops/tests/test_registry.py) | **Implemented (PASS)** |
-| **C-06** | **Data Contract & Schema Validation** | Schema drift, null features, invalid ranges breaking downstream models | Rejects malformed tabular inputs at the pipeline boundary before featurization | Pandera schema in `src/data/validate.py`, [`data/processed/feature_spec.json`](file:///e:/mlops/data/processed/feature_spec.json) | **Implemented (PASS)** |
-| **C-07** | **Zero Hardcoded Secrets Policy** | Compromise of cloud registry, container registry, or deployment webhooks | Protects infrastructure credentials from public repository exposure | [`.github/workflows/ci.yml`](file:///e:/mlops/.github/workflows/ci.yml), Render environment variables | **Implemented (PASS)** |
-| **C-08** | **Container Immutability via Git Commit SHAs** | Image drift, untraceable container binaries in production | Ensures exact 1-to-1 traceability between deployed cloud container and source code commit | Image tagging (`sha-<7>`) in [`.github/workflows/cd.yml`](file:///e:/mlops/.github/workflows/cd.yml) | **Implemented (PASS)** |
-| **C-09** | **Live Health & Readiness Probing** | Traffic routed to unresponsive or degraded inference instances | Ensures Render deployment fails fast if model weights fail to load | `/health` endpoint in [`src/api/main.py`](file:///e:/mlops/src/api/main.py), CD health poll in [`.github/workflows/cd.yml`](file:///e:/mlops/.github/workflows/cd.yml) | **Implemented (PASS)** |
+| **C-01** | **Automated Model Quality Gate** | Deployment of underperforming, overfitted, or unstable models | Prevents regressions by enforcing 8 empirical performance thresholds before staging promotion | [`src/models/quality_gate.py`](../src/models/quality_gate.py), [`params.yaml`](../params.yaml) | **Implemented (PASS)** |
+| **C-02** | **Slice Fairness & Subgroup Evaluation** | Disproportionate performance degradation during night hours or cold-start scenarios | Protects commuter trust across diverse operating conditions; ensures model is reliable during off-peak and cold-start transitions | [`reports/quality_gate.json`](../reports/quality_gate.json) (hourly and `has_prev_bus` checks) | **Implemented (PASS)** |
+| **C-03** | **Interactive Human Approval Gate** | Accidental, rogue, or automated production model releases | Enforces strict human accountability; ensures no automated tool can deploy weights directly to production | `promote_to_production()` in [`src/models/registry.py`](../src/models/registry.py) | **Implemented (PASS)** |
+| **C-04** | **Immutable Audit Logging** | Unaudited model deployments, dispute over deployment authorization | Provides an unalterable forensic record of who authorized each production release, when, and why | [`reports/production_approvals.json`](../reports/production_approvals.json), [`reports/model_registry.json`](../reports/model_registry.json) | **Implemented (PASS)** |
+| **C-05** | **Test Isolation from Production State** | Unit tests polluting production registry or approval files | Prevents mock test inputs from contaminating live audit trails | `isolate_approval_history` autouse fixture in [`tests/test_registry.py`](../tests/test_registry.py) | **Implemented (PASS)** |
+| **C-06** | **Data Contract & Schema Validation** | Schema drift, null features, invalid ranges breaking downstream models | Rejects malformed tabular inputs at the pipeline boundary before featurization | Pandera schema in `src/data/validate.py`, [`data/processed/feature_spec.json`](../data/processed/feature_spec.json) | **Implemented (PASS)** |
+| **C-07** | **Zero Hardcoded Secrets Policy** | Compromise of cloud registry, container registry, or deployment webhooks | Protects infrastructure credentials from public repository exposure | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), Render environment variables | **Implemented (PASS)** |
+| **C-08** | **Container Immutability via Git Commit SHAs** | Image drift, untraceable container binaries in production | Ensures exact 1-to-1 traceability between deployed cloud container and source code commit | Image tagging (`sha-<7>`) in [`.github/workflows/cd.yml`](../.github/workflows/cd.yml) | **Implemented (PASS)** |
+| **C-09** | **Live Health & Readiness Probing** | Traffic routed to unresponsive or degraded inference instances | Ensures Render deployment fails fast if model weights fail to load | `/health` endpoint in [`src/api/main.py`](../src/api/main.py), CD health poll in [`.github/workflows/cd.yml`](../.github/workflows/cd.yml) | **Implemented (PASS)** |
 | **C-10** | **GitHub Branch Protection on `main`** | Direct pushes breaking production branch or bypassing CI checks | Guarantees all code merged to `main` undergoes peer review and passes automated tests | *Recommended to repository administrators* | **Planned (MANUAL)** |
 | **C-11** | **Continuous Automated Data Drift Monitoring** | Concept drift and unmonitored accuracy decay over time | Detects when feature distributions or road speeds shift significantly, triggering retraining alerts | Built by Ajay; documented in `docs/drift_monitoring.md` | **Planned (PLANNED)** |
 
@@ -81,7 +81,7 @@ The automated model quality gate (`src/models/quality_gate.py`) enforces 8 manda
 4. **Generalization Gap**: $\le 10.0\%$ (Achieved: **4.32%**)
 5. **Within-60s Prediction Accuracy**: $\ge 85.0\%$ (Achieved: **89.35%**)
 6. **Model Artifact File Size**: $\le 100.0$ MB (Achieved: **66.80 MB**)
-7. **Single-Row Warm Inference Latency**: $\le 50.0$ ms (Achieved: **15.17 ms**)
+7. **Single-Row Warm Inference Latency**: $\le 50.0$ ms (Achieved: **15.70 ms**)
 8. **Prediction Sanity Range**: Finite, positive, bounded in $[1, 1800]$ seconds (Achieved: **All valid**)
 
 ### Slice Fairness Checks
@@ -146,11 +146,11 @@ in W&B to previous version        ghcr.io/niksi-nova/mlops:sha-<old>
 
 ## 9. Model Risk Register Summary
 
-For complete risk quantification and technical mitigations, see [`docs/model_risk_report.md`](file:///e:/mlops/docs/model_risk_report.md).
+For complete risk quantification and technical mitigations, see [`docs/model_risk_report.md`](model_risk_report.md).
 
 | Risk ID | Category | Severity | Likelihood | Impact | Key Technical Mitigation |
 |---|---|---|---|---|---|
-| **R-01** | **Data Drift** | High | High | High | Daily rolling MAE monitoring; automated retraining trigger at MAE $> 35.0$s |
+| **R-01** | **Data Drift** | High | High | High | Two-day simulated drift windows; consecutive alerts recommend human review |
 | **R-02** | **Target Leakage** | Critical | Low | Critical | Strict temporal boundary: `own_prev_segment_tt_s` precedes segment entry |
 | **R-03** | **Long Delay Tail** | High | Medium | High | Bounded prediction sanity checks $[1, 1800]$s; L1 objective robust to outliers |
 | **R-04** | **Route & Hour Bias** | High | High | Medium | Slice-based quality gate checks (`max_slice_mae_ratio <= 1.8`) |

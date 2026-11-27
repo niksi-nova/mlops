@@ -160,7 +160,7 @@ However, production deployment introduces operational risks spanning real-time f
 | Generalisation Gap | $\le 10.0\%$ | **4.32%** | **PASS** |
 | Within-60s Accuracy | $\ge 85.0\%$ | **89.35%** | **PASS** |
 | Model Artifact File Size | $\le 100.0\text{ MB}$ | **66.80 MB** | **PASS** |
-| Single-Row Warm Latency (Median) | $\le 50.0\text{ ms}$ | **15.17 ms** | **PASS** |
+| Single-Row Warm Latency (Median) | $\le 50.0\text{ ms}$ | **15.70 ms** | **PASS** |
 | Prediction Sanity | Finite, positive, $[1, 1800]$s | All 200 samples valid | **PASS** |
 | Slices: Hourly Performance | Ratio $\le 1.8$, Min $N \ge 100$ | 18 hours evaluated, max ratio 1.46 | **PASS** |
 | Slices: Low-Volume Slices | Mark $N < 100$ as INSUFFICIENT_DATA | Hour 4 ($N=1$) flagged cleanly | **PASS** |
