@@ -72,12 +72,14 @@ drift:
   psi_warn: 0.1
   psi_alert: 0.25
   ks_p_value: 0.01
-  mae_degradation_pct_alert: 15.0
+  # Complete two-day validation windows, relative to full validation MAE.
+  # Mean change -1.7214%, sample SD 8.2195 points; mean + 2 / 3 SD.
+  mae_degradation_pct_warn: 14.72
+  mae_degradation_pct_alert: 22.94
   window_size: 5000
   n_bins: 10
   seed: 42
   ks_stat_min: 0.1
-  mae_degradation_pct_warn: 7.5
   retrain_consecutive_alert_windows: 2
   window_days: 2
   exclude_features:
