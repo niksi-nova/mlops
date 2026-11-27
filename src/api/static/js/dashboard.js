@@ -180,3 +180,35 @@ function governancePanel() {
   records(byId("controls"), ["Control", "Risk", "Status", "Evidence"], gov.controls.map(c =>
     [c.id + " · " + c.name, c.risk, chip(c.status), controlEvidence(c)]));
 }
+
+async function liveStatus() {
+  const retry = byId("retry");
+  const message = byId("live-message");
+  retry.disabled = true;
+  const values = byId("live-values");
+  values.replaceChildren();
+  message.textContent = "Contacting the service. A cold start can take about a minute…";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 75000);
+  try {
+    do {
+      const health = await fetch("/health", {signal: controller.signal, cache: "no-store"});
+      if (health.ok && (await health.json()).model_loaded) break;
+      if (health.status !== 503 && !health.ok) throw new Error("Health check returned HTTP " + health.status);
+      message.textContent = "Model is loading. Checking again…";
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } while (!controller.signal.aborted);
+    const res = await fetch("/model-info", {signal: controller.signal, cache: "no-store"});
+    if (!res.ok) throw new Error("Model information returned HTTP " + res.status);
+    const info = await res.json();
+    records(values, ["Field", "Runtime value"], [["model_loaded", "true"], ...["source", "alias", "version", "git_commit"].map(k => [k, info[k]])]);
+    message.textContent = "Connected · model loaded";
+  } catch (err) {
+    message.textContent = controller.signal.aborted ? "The service timed out while waking. Retry to check again." : "Live status is unavailable. " + err.message + ". Retry to reconnect.";
+  } finally {
+    clearTimeout(timer);
+    retry.disabled = false;
+  }
+}
+byId("retry").addEventListener("click", liveStatus);
+liveStatus();
