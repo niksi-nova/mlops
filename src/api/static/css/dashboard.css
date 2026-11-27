@@ -48,3 +48,6 @@
   .bar-row { grid-template-columns: 1fr auto; gap: .2rem .5rem; padding: .5rem 0; }
   .bar-row svg { grid-column: 1 / -1; grid-row: 2; }
 }
+.dashboard .chip, .dashboard th { white-space: nowrap; }
+.dashboard .section-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.dashboard .section-links a { padding: .2rem 0; }

@@ -26,24 +26,25 @@
 <main id="main" class="dashboard">
   <h1>Pipeline dashboard</h1>
   <p>Delhi bus travel times, from the DVC dataset to the serving model.</p>
+  <nav class="section-links" aria-label="Dashboard sections"><a href="#performance">Performance</a> <a href="#drift">Drift</a> <a href="#versioning">Versioning</a> <a href="#governance">Governance</a> <a href="#service">Live service</a></nav>
   <noscript>Enable JavaScript for charts and live status. <a href="https://github.com/niksi-nova/mlops/tree/main/reports">Browse the evidence reports</a>.</noscript>
   <p id="snapshot-error" role="alert"></p>
   <section><h2>Pipeline stages</h2><ol id="stages" class="stops"></ol></section>
-<section><h2>Model performance</h2>
+<section id="performance"><h2>Model performance</h2>
   <p class="legend"><span class="key val"></span> Validation MAE / <span class="key test"></span> Test MAE · seconds</p>
   <div id="performance-bars"></div><h3 id="gate-title">Quality gate</h3><div id="checks"></div></section>
-<section><h2>Drift monitoring</h2>
+<section id="drift"><h2>Drift monitoring</h2>
   <label for="scenario">Scenario</label> <select id="scenario"></select>
   <p id="drift-status" aria-live="polite"></p><p id="disclaimer"></p>
   <p id="control-status" class="legend"></p><div class="twocol"><figure id="mae-chart"></figure><figure id="psi-chart"></figure></div>
   <p class="legend">Solid green · selected scenario &nbsp; / &nbsp; Dashed black · clean control</p>
   <details><summary>Window measurements</summary><div id="windows"></div></details>
   <h3>Top drifted features</h3><div id="features"></div></section>
-<section><h2>Version ledger</h2><p>Versioning lets the team trace a prediction to its model, training data, code, image and settings. Those records let an operator reproduce a release or identify the previous approved version during rollback.</p>
+<section id="versioning"><h2>Version ledger</h2><p>Versioning lets the team trace a prediction to its model, training data, code, image and settings. Those records let an operator reproduce a release or identify the previous approved version during rollback.</p>
   <p id="version-source"></p><div id="layers"></div><h3>Model artifacts</h3><div id="versions"></div>
   <h3 id="collection">Registry collection</h3><div id="aliases"></div></section>
-<section><h2>Governance controls</h2><p class="legend" id="governance-counts"></p><div id="controls"></div></section>
-<section><h2>Live service</h2><p id="live-message" role="status">Checking service…</p><div id="live-values"></div><button id="retry" type="button">Retry live status</button></section>
+<section id="governance"><h2>Governance controls</h2><p class="legend" id="governance-counts"></p><div id="controls"></div></section>
+<section id="service"><h2>Live service</h2><p id="live-message" role="status">Checking service…</p><div id="live-values"></div><button id="retry" type="button">Retry live status</button></section>
 </main>
 <script src="/static/js/app.js"></script>
 <script src="/static/js/dashboard.js"></script>

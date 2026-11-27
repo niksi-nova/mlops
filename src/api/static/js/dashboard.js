@@ -103,7 +103,7 @@ function trendChart(container, label, key, scenario, control) {
   const y = value => height - bottom - value / max * (height - top - bottom);
   const x = i => left + i / Math.max(1, scenario.windows.length - 1) * (width - left - right);
   function tick(value, xx, yy, anchor) {
-    const text = svgNode("text", {x: xx, y: yy, "text-anchor": anchor, "font-size": 12, fill: "var(--ink)"});
+    const text = svgNode("text", {x: xx, y: yy, "text-anchor": anchor, "font-size": 14, fill: "var(--ink)"});
     text.textContent = value;
     chart.append(text);
   }

@@ -354,3 +354,12 @@ button.secondary:hover { background: var(--paper); }
 .flex-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .muted { opacity: 0.7; }
 .text-right { text-align: right; }
+
+/* Wrap route stations onto complete lines on narrow screens. */
+@media (max-width: 560px) {
+  .site-header nav { width: 100%; }
+  .route-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: .65rem; }
+  .route-nav::before { display: none; }
+  .route-nav li { margin-right: 0; }
+  .route-nav li::before { content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 3px; background: var(--ink); z-index: -1; }
+}
