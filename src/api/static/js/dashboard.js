@@ -51,6 +51,7 @@ async function dashboard() {
     evidence = await fetchJSON(DATA_BASE + "/dashboard.json");
     stages();
     performancePanel();
+    driftPanel();
   } catch {
     byId("snapshot-error").textContent = "The dashboard evidence could not be loaded. Refresh to try again.";
   }
@@ -91,4 +92,52 @@ function performancePanel() {
 
 function chip(label) {
   return element("span", label, "chip " + label.toLowerCase());
+}
+
+function trendChart(container, label, key, scenario, control) {
+  const width = 360, height = 136, left = 44, right = 15, top = 14, bottom = 25;
+  const chart = svgNode("svg", {viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": label + " by window, values in the table below"});
+  const max = Math.max(...scenario.windows.concat(control.windows).map(w => w[key]), 0.01);
+  const y = value => height - bottom - value / max * (height - top - bottom);
+  const x = i => left + i / Math.max(1, scenario.windows.length - 1) * (width - left - right);
+  function tick(value, xx, yy, anchor) {
+    const text = svgNode("text", {x: xx, y: yy, "text-anchor": anchor, "font-size": 12, fill: "var(--ink)"});
+    text.textContent = value;
+    chart.append(text);
+  }
+  for (const value of [0, max / 2, max]) {
+    chart.append(svgNode("line", {x1: left, x2: width-right, y1: y(value), y2: y(value), stroke: "var(--ink)", opacity: .25}));
+    tick(value.toFixed(key === "mae" ? 1 : 2), left - 5, y(value) + 4, "end");
+  }
+  scenario.windows.forEach((w, i) => tick(w.window, x(i), height - 5, "middle"));
+  for (const [series, color, dashed] of [[scenario, "var(--dtc-green)", false], [control, "var(--ink)", true]]) {
+    const points = series.windows.map((w, i) => x(i) + "," + y(w[key])).join(" ");
+    chart.append(svgNode("polyline", {points, fill: "none", stroke: color, "stroke-width": 2.3, "stroke-dasharray": dashed ? "4 4" : "none"}));
+  }
+  container.replaceChildren(element("figcaption", label), chart);
+}
+
+function driftPanel() {
+  const report = evidence.drift_report;
+  const select = byId("scenario");
+  const control = report.scenarios.find(s => !s.induced);
+  for (const s of report.scenarios) select.add(new Option(s.name.replaceAll("_", " "), s.name));
+  select.value = (report.scenarios.find(s => s.induced) || control).name;
+  byId("disclaimer").textContent = report.disclaimer;
+  function render() {
+    const s = report.scenarios.find(item => item.name === select.value);
+    const marker = chip(s.induced ? "SIMULATED" : "CONTROL");
+    if (s.induced) marker.classList.add("sim");
+    byId("drift-status").replaceChildren(marker, " ", chip(s.status), "  " + s.description);
+    byId("control-status").textContent = "Clean control · " + control.status + "   |   First alert · " + (s.first_alert_window || "None");
+    trendChart(byId("mae-chart"), "Mean absolute error (seconds)", "mae", s, control);
+    trendChart(byId("psi-chart"), "Maximum eligible feature PSI", "max_psi", s, control);
+    records(byId("windows"), ["Window", "Days", "MAE (s)", "Control (s)", "Max PSI", "Control PSI", "Status"],
+      s.windows.map((w, i) => [w.window, w.days, w.mae.toFixed(2), control.windows[i].mae.toFixed(2),
+        w.max_psi.toFixed(3), control.windows[i].max_psi.toFixed(3), chip(w.status)]));
+    records(byId("features"), ["Feature", "PSI", "Peak window"], s.top_drifted_features.map(f =>
+      [f.feature, f.psi.toFixed(3), f.peak_window]));
+  }
+  select.addEventListener("change", render);
+  render();
 }
