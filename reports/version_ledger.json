@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-22T10:15:29.568058+00:00",
+  "generated_at": "2026-11-27T17:48:04.071507+00:00",
   "source": "local_reports",
   "layers": {
     "code": {
-      "git_commit": "946827e637ba76903cb8d6c1889d1d4f6b324f8d",
-      "branch": "phase3-versioning-governance"
+      "git_commit": "3aeb8f728b1784d3b88132c9bd171d969497421e",
+      "branch": "main"
     },
     "data": {
       "dataset_version": "delhi-data-v2",
@@ -18,11 +18,11 @@
       "registry": "ghcr.io/niksi-nova/mlops",
       "tags": [
         "latest",
-        "sha-946827e"
+        "sha-3aeb8f7"
       ]
     },
     "config": {
-      "params_md5": "9e9ce25bc11e54e8a05d0a49bd15715c"
+      "params_md5": "7a1c3c0a70a31e12e0a761a585c1f39b"
     }
   },
   "model_versions": [

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-22T14:47:01.436256+00:00",
+  "generated_at": "2026-11-27T17:48:21.115245+00:00",
   "controls": [
     {
       "id": "G01",
@@ -31,7 +31,7 @@
       "risk": "Exposed cloud credentials or API keys in repository",
       "evidence": ".gitignore and repository source files",
       "status": "PASS",
-      "detail": "Basic regex scan verified 59 text/source files clean; zero unredacted keys detected"
+      "detail": "Basic regex scan verified 77 text/source files clean; zero unredacted keys detected"
     },
     {
       "id": "G05",
@@ -39,7 +39,7 @@
       "risk": "Regression in model inference, data processing or API logic",
       "evidence": "tests/",
       "status": "PASS",
-      "detail": "14 test files present in tests/ directory"
+      "detail": "24 test files present in tests/ directory"
     },
     {
       "id": "G06",
