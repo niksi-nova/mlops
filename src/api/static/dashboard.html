@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline dashboard — Delhi Bus Delay</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="site-title">Delhi Bus Delay <span class="tag">DEMO</span></div>
+  <nav aria-label="Pipeline stations">
+    <ul class="route-nav">
+      <li><a href="/"><span class="dot"></span>Counter</a></li>
+      <li><a href="/trip"><span class="dot"></span>Trip</a></li>
+      <li><a href="/data"><span class="dot"></span>Data</a></li>
+      <li><a href="/models"><span class="dot"></span>Models</a></li>
+      <li><a href="/pipeline"><span class="dot"></span>Pipeline</a></li>
+      <li><a href="/static/dashboard.html"><span class="dot"></span>Dashboard</a></li>
+      <li><a href="/about"><span class="dot"></span>About</a></li>
+    </ul>
+  </nav>
+</header>
+<main id="main" class="dashboard">
+  <h1>Pipeline dashboard</h1>
+  <p>Delhi bus travel times, from the DVC dataset to the serving model.</p>
+  <noscript>Enable JavaScript for charts and live status. <a href="https://github.com/niksi-nova/mlops/tree/main/reports">Browse the evidence reports</a>.</noscript>
+  <p id="snapshot-error" role="alert"></p>
+  <section><h2>Pipeline stages</h2><ol id="stages" class="stops"></ol></section>
+</main>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

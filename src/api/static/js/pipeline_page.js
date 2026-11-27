@@ -17,14 +17,6 @@ const STATIONS = {
     { id: "cicd", label: "CI/CD", tool: "GitHub Actions", file: ".github/workflows/ci.yml, cd.yml", number: null, desc: "Tests, quality gate, Docker smoke test on every push; build+push+deploy on main." },
     { id: "deploy", label: "Deploy", tool: "GHCR, Render", file: "docs/deployment.md", number: null, desc: "Published image deployed to a free Render web service via a deploy hook." },
   ],
-  phase3: [
-    { id: "logging", label: "Logging", tool: "planned", file: null, number: null, desc: "Structured request/prediction logs for every call (planned)." },
-    { id: "dashboard", label: "Dashboard", tool: "planned", file: null, number: null, desc: "A live ops dashboard over those logs (planned)." },
-    { id: "drift", label: "Drift detection", tool: "planned", file: null, number: null, desc: "Monitoring prediction/feature drift over time (planned)." },
-    { id: "retrain", label: "Retrain trigger", tool: "planned", file: null, number: null, desc: "Automatic retraining when drift crosses a threshold (planned)." },
-    { id: "compare", label: "Compare models", tool: "planned", file: null, number: null, desc: "Champion/challenger comparison before promotion (planned)." },
-    { id: "redeploy", label: "Redeploy", tool: "planned", file: null, number: null, desc: "Automated redeploy of a newly-promoted model (planned)." },
-  ],
 };
 
 function drawTrack(svgId, stations, planned) {
@@ -125,7 +117,6 @@ async function init() {
   pipelineData = await fetchJSON(`${DATA_BASE}/pipeline.json`);
   drawTrack("phase1-track", STATIONS.phase1, false);
   drawTrack("phase2-track", STATIONS.phase2, false);
-  drawTrack("phase3-track", STATIONS.phase3, true);
   renderPassport(pipelineData);
   renderGateTable(pipelineData);
 }
