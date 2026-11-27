@@ -83,3 +83,9 @@ drift:
   exclude_features:
     - relative_weekday
     - te_vehicle
+
+governance:
+  collection: "delhi-bus-delay-model"
+  image_registry: "ghcr.io/niksi-nova/mlops"
+  default_rollback_version: "v1"
+

@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-11-22T14:47:01.436256+00:00",
+  "controls": [
+    {
+      "id": "G01",
+      "name": "Quality gate passed",
+      "risk": "Substandard or overfitted model reaches production",
+      "evidence": "reports/quality_gate.json",
+      "status": "PASS",
+      "detail": "Quality gate passed (8/8 checks satisfied)"
+    },
+    {
+      "id": "G02",
+      "name": "Production approval record",
+      "risk": "Unauthorized model deployment to production",
+      "evidence": "reports/production_approvals.json",
+      "status": "PASS",
+      "detail": "Authorized human approval recorded by Anika on 2026-11-08T17:55:37.557242+00:00"
+    },
+    {
+      "id": "G03",
+      "name": "Registry & approval consistency",
+      "risk": "Discrepancy between registered model version and approved version",
+      "evidence": "reports/model_registry.json",
+      "status": "PASS",
+      "detail": "Registry active production version (v1) matches approved version (v1)"
+    },
+    {
+      "id": "G04",
+      "name": "Zero hardcoded secrets scan",
+      "risk": "Exposed cloud credentials or API keys in repository",
+      "evidence": ".gitignore and repository source files",
+      "status": "PASS",
+      "detail": "Basic regex scan verified 59 text/source files clean; zero unredacted keys detected"
+    },
+    {
+      "id": "G05",
+      "name": "Automated test suite present",
+      "risk": "Regression in model inference, data processing or API logic",
+      "evidence": "tests/",
+      "status": "PASS",
+      "detail": "14 test files present in tests/ directory"
+    },
+    {
+      "id": "G06",
+      "name": "CI/CD automation workflows present",
+      "risk": "Manual unverified deployment into production",
+      "evidence": ".github/workflows/ci.yml, .github/workflows/cd.yml",
+      "status": "PASS",
+      "detail": "CI workflow (tests, quality-gate, smoke) and CD workflow (image build, publish, Render hook) configured"
+    },
+    {
+      "id": "G07",
+      "name": "Model governance & card documentation",
+      "risk": "Lack of transparency, misuse or uncalibrated deployment",
+      "evidence": "docs/model_card.md, docs/governance.md, docs/model_risk_report.md",
+      "status": "PASS",
+      "detail": "Model card, governance framework, and model risk report present and complete"
+    },
+    {
+      "id": "G08",
+      "name": "Quality gate parameters defined",
+      "risk": "Uncalibrated or arbitrary evaluation thresholds",
+      "evidence": "params.yaml",
+      "status": "PASS",
+      "detail": "Configured thresholds: max_mae=35.0s, min_within_60s=85.0%, gen_gap=10.0%"
+    },
+    {
+      "id": "G09",
+      "name": "GitHub main branch protection",
+      "risk": "Unreviewed direct pushes or force-pushes to production main branch",
+      "evidence": "GitHub Repository Settings -> Branches",
+      "status": "MANUAL",
+      "detail": "Requires repository administrator confirmation in GitHub settings: enforce PR reviews and passing CI checks"
+    },
+    {
+      "id": "G10",
+      "name": "Continuous automated drift monitoring",
+      "risk": "Undetected traffic distribution shifts degrading live prediction accuracy",
+      "evidence": "docs/drift_monitoring.md",
+      "status": "PLANNED",
+      "detail": "Continuous drift monitoring pipeline (Kolmogorov-Smirnov & Wasserstein drift tests) planned for deployment"
+    }
+  ],
+  "summary": {
+    "pass": 8,
+    "fail": 0,
+    "manual": 1,
+    "planned": 1
+  }
+}
