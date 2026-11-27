@@ -1,3 +1,13 @@
+"""Unit tests for src/data/build_segments.py.
+
+Covers stop-to-stop segment construction (travel_time_s and nodes_spanned
+between consecutive GPS node readings), dropping zero-span segments (same
+node recorded twice, no distance covered), and the physical bounds filter
+(min_segment_seconds=1, max_segment_seconds=1800 from params.yaml:segments -
+drops zero/negative-time rows and recording-error outliers over 30 minutes).
+Hand-built DataFrames only; no real GPS data read.
+"""
+
 import pandas as pd
 
 from src.data.build_segments import apply_bounds, build_segments, drop_zero_span_segments

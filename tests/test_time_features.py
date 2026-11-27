@@ -1,3 +1,13 @@
+"""Unit tests for src/features/time_features.py.
+
+Covers calendar-based features (is_rush_hour, is_weekend, cyclic hour_sin/
+hour_cos encoding, timezone handling) and trip-elapsed-time features derived
+from depart_time_s (hour/minute_of_day, midnight-wrap past 86400s, is_peak_am
+/is_peak_pm boundaries from params.yaml:featurize peak_am=[8,10] and
+peak_pm=[17,20], and relative_weekday as a categorical dtype for LightGBM).
+Hand-built DataFrames only; no real GPS data read.
+"""
+
 import numpy as np
 import pandas as pd
 import pytest

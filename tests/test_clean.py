@@ -1,3 +1,13 @@
+"""Unit tests for src/data/clean.py's trip-assignment and bad-trip detection.
+
+Covers trip splitting on node resets and long gaps (trip_gap_minutes=30,
+from params.yaml:clean), midnight-wrap correction (raw time jumping back
+>12h is fixed in place, not split into a new trip), and dropping whole trips
+with backward time jumps that aren't midnight wraps (find_bad_trips with
+min_nodes_per_trip=2 in these tests; production default is 5). Hand-built
+DataFrames only; no real GPS data read.
+"""
+
 import pandas as pd
 
 from src.data.clean import assign_trips, find_bad_trips

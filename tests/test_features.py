@@ -1,3 +1,16 @@
+"""Unit tests for src/features/build_features.py.
+
+Covers the leakage guard for the "recent bus" feature (a previous bus must
+have *finished* its segment before the current bus departs - a bus still
+in-flight when a later bus departs is never used, regardless of order),
+non-overlapping train/val/test day ranges (params.yaml:featurize), that
+historical typical-value lookups for val/test rows come strictly from train
+data (no peeking at the row's own travel time), that target/leakage-prone
+columns are excluded from FEATURES, and rare-vehicle grouping (vehicles
+below min_count are folded into an "other" category so unseen vehicles at
+serve time don't break the model). Hand-built DataFrames only.
+"""
+
 import pandas as pd
 
 from src.features.build_features import (
