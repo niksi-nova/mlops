@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 
 
-def log_to_wandb(rep, html_path=None):
+def log_to_wandb(rep, html_path=None, *, send_alerts=True):
     if not os.environ.get("WANDB_API_KEY"):
         print("WANDB_API_KEY not set, skipping W&B logging")
         return None
@@ -12,7 +12,7 @@ def log_to_wandb(rep, html_path=None):
 
     run = wandb.init(project="delhi-bus-delay", entity="anikaub20-rv-college",
                      job_type="monitoring", name="drift-demo-simulated",
-                     config={"thresholds": rep["thresholds"], "simulated": True})
+                     config={"thresholds": rep["thresholds"], "simulated": True, "send_alerts": send_alerts})
     run.define_metric("window_idx")
     run.define_metric("*", step_metric="window_idx")
     table = wandb.Table(columns=["scenario", "window", "n", "mae", "mae_degradation_pct",
@@ -36,7 +36,7 @@ def log_to_wandb(rep, html_path=None):
             run.log({"drift_report_html": wandb.Html(fh.read())})
     try:
         for s in rep["scenarios"]:
-            if s["status"] == "ALERT":
+            if send_alerts and s["status"] == "ALERT":
                 wandb.alert(title="SIMULATED drift alert: %s" % s["name"],
                             text="First alert at %s. Retrain recommended (candidate only; needs "
                                  "quality gate and human approval)." % s["first_alert_window"],

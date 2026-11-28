@@ -4,7 +4,7 @@ Before presenting, open the [drift replay](../reports/drift_report.html), [versi
 
 ## 0:00–2:30 · Drift
 
-**Open:** With the DVC splits and model available, run `uv run python scripts/run_drift_demo.py --out /tmp/delhi-demo/drift_report.json` and open the neighboring HTML report. If replay is still running, show the committed HTML and compare the clean control with gradual drift.
+**Open:** With the DVC splits and model available, run `uv run python scripts/run_drift_demo.py --out /tmp/delhi-demo/drift_report.json` and open the neighboring HTML report. If replay is still running, show the committed HTML and compare the clean control with gradual drift. For the W&B view, open `status_table` on the finished run. It contains eight windows for each of the five scenarios. [Monitoring run](https://forge.coreweave.com/wandb/anikaub20-rv-college/delhi-bus-delay/runs/4t0vffa3)
 
 **Say:** “These are SIMULATED perturbations on real test days. The unmodified control stayed OK, and gradual drift first alerted in w6. Road works produced a single alert, below the two consecutive alerts needed to recommend retraining.” [Window results](../reports/drift_report.json)
 
@@ -12,7 +12,7 @@ Before presenting, open the [drift replay](../reports/drift_report.html), [versi
 
 **Open:** Show the **Version ledger** dashboard section. If the dashboard is unavailable, open [reports/version_ledger.json](../reports/version_ledger.json) and show `layers`, `model_versions` and `registry`.
 
-**Say:** “Code, data, model, image and configuration have separate identifiers so we can reconstruct a release or choose what to roll back. The checked-in ledger comes from `local_reports`. Its W&B aliases, digests and source versions were not live-verified in this session.” [Versioning guide](versioning.md)
+**Say:** “Code, data, model, image and configuration have separate identifiers so we can reconstruct a release or choose what to roll back. The live W&B ledger shows three distinct artifact digests. The registry collection’s v0 carries the production alias and links to source artifact delhi-lightgbm_l1:v2.” [Versioning guide](versioning.md)
 
 ## 4:30–7:30 · Pipeline dashboard
 
@@ -33,7 +33,7 @@ Before presenting, open the [drift replay](../reports/drift_report.html), [versi
 3. **Why exclude weekday and vehicle encoding from alerting?** A short window covers only part of the weekly cycle, and vehicle encoding is out-of-fold in training but uses a fixed training-fitted map on held-out data. Both `relative_weekday` and `te_vehicle` remain measured and visible in every window. [Drift report](../reports/drift_report.json)
 4. **Why did road works alert without a retraining recommendation?** It produced one isolated alert. The policy requires two consecutive alert windows. A recommendation still requires a candidate to pass the quality gate and receive human approval. [Drift report](../reports/drift_report.json)
 5. **Can PSI alone establish model degradation?** PSI measures distribution shifts. Prediction error requires matching observed travel times to predictions, and those outcomes may arrive later. [Monitoring guide](drift_monitoring.md)
-6. **Why are there different version numbers?** The local approval refers to `v1`, while the offline ledger records collection `v0` linked to source artifact `delhi-lightgbm_l1:v2`. These are labels in different systems, and this session did not confirm the live mapping. [Approvals](../reports/production_approvals.json) · [Version ledger](../reports/version_ledger.json)
+6. **Why are there different version numbers?** The local approval refers to `v1`. W&B independently identifies the collection entry as `v0` and its linked source artifact as `delhi-lightgbm_l1:v2`. The live API confirmed the link and the collection’s `production` alias. [Approvals](../reports/production_approvals.json) · [Version ledger](../reports/version_ledger.json)
 7. **What would you identify before rolling back?** Find the approved artifact and its feature spec, the matching image and code revision, and the dataset and config used for evaluation. Verify the running version and its health afterward. [Version ledger](../reports/version_ledger.json)
 8. **Is the model's reported git commit the deployed image's commit?** The API reports model lineage from registry metadata. The CD job publishes the image tag for its own source revision. Check those identifiers separately. [Deployment notes](deployment.md)
 9. **Why show both validation and test MAE?** The team selects and tunes on validation, then evaluates on held-out data. The gate records **29.33 s validation MAE**, **30.60 s test MAE** and a **4.32%** gap. [Quality gate](../reports/quality_gate.json)
