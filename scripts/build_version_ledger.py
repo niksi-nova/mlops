@@ -100,38 +100,33 @@ def fetch_wandb_ledger_data(workspace: str, project: str, collection: str) -> di
         import wandb
         api = wandb.Api(timeout=10)
         target_art = f"{workspace}/{project}/delhi-lightgbm_l1"
-        versions = api.artifact_versions("model", target_art)
+        versions = api.artifacts("model", target_art)
         model_versions = []
         for v in versions:
             metrics = v.metadata.get("checks", {}).get("max_test_mae", {})
-            test_mae = metrics.get("value") or v.metadata.get("test_mae", 0.0)
+            test_mae = metrics.get("value", v.metadata.get("test_mae"))
             model_versions.append({
                 "artifact": "delhi-lightgbm_l1",
                 "version": v.version,
                 "aliases": list(v.aliases),
                 "digest": v.digest,
                 "created_at": v.created_at,
-                "test_mae": float(test_mae),
-                "git_commit": v.metadata.get("git_commit", ""),
-                "dataset_version": v.metadata.get("dataset_version", DATASET_VERSION),
+                "test_mae": float(test_mae) if test_mae is not None else None,
+                "git_commit": v.metadata.get("git_commit"),
+                "dataset_version": v.metadata.get("dataset_version"),
             })
 
-        # Collection versions in registry
-        collection_versions = []
-        try:
-            reg_art = api.artifact(f"{workspace}/{project}/{collection}:latest")
-            collection_versions.append({
-                "version": reg_art.version,
-                "aliases": list(reg_art.aliases),
-                "source": f"delhi-lightgbm_l1:{reg_art.version}",
-            })
-        except Exception:
-            pass
+        registry_versions = [
+            {"version": linked.version, "aliases": list(linked.aliases), "source": linked.source_name}
+            for linked in api.artifacts("model", f"{workspace}/{project}/{collection}")
+        ]
+        if not model_versions or not registry_versions:
+            return None
 
         return {
             "source": "wandb",
             "model_versions": model_versions,
-            "registry_versions": collection_versions or None,
+            "registry_versions": registry_versions,
         }
     except Exception as exc:
         logger.debug("W&B API query skipped or failed: %s", exc)
@@ -201,20 +196,19 @@ def build_version_ledger() -> dict[str, Any]:
     wandb_data = fetch_wandb_ledger_data(DEFAULT_WORKSPACE, DEFAULT_PROJECT, DEFAULT_COLLECTION)
     source = "wandb" if wandb_data else "local_reports"
 
-    if wandb_data and wandb_data.get("model_versions"):
+    if wandb_data:
         model_versions = wandb_data["model_versions"]
+        registry_versions = wandb_data["registry_versions"]
+        production = next((v for v in registry_versions if "production" in v["aliases"]), None)
+        active_model_version = production["source"].rsplit(":", 1)[1] if production else None
     else:
         model_versions = get_local_model_versions()
-
-    # Active production model version
-    active_model_version = "v2"
-    registry_versions = [
-        {
+        active_model_version = "v2"
+        registry_versions = [{
             "version": "v0",
             "aliases": ["production", "staging", "candidate", "latest"],
             "source": f"delhi-lightgbm_l1:{active_model_version}",
-        }
-    ]
+        }]
 
     ledger: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -249,14 +243,17 @@ def build_version_ledger() -> dict[str, Any]:
     return ledger
 
 
-def main() -> int:
+def main(output_path: Path | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     ledger = build_version_ledger()
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(json.dumps(ledger, indent=2), encoding="utf-8")
-    logger.info("Version ledger written to %s (source: %s)", OUTPUT_PATH, ledger.get("source"))
+    output_path = output_path or OUTPUT_PATH
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(ledger, indent=2), encoding="utf-8")
+    logger.info("Version ledger written to %s (source: %s)", output_path, ledger.get("source"))
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=OUTPUT_PATH)
+    raise SystemExit(main(parser.parse_args().output))

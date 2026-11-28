@@ -130,6 +130,8 @@ def main():
     ap.add_argument("--scenario", default="all", choices=["all"] + list(sim.SCENARIOS),
                     help="all, or one scenario name")
     ap.add_argument("--out", default=os.path.join(ROOT, "reports", "drift_report.json"))
+    ap.add_argument("--wandb", action="store_true",
+                    help="Log this replay as one W&B monitoring run with notifications off")
     args = ap.parse_args()
     params = load_params()
     th = rp.read_thresholds(params)
@@ -162,6 +164,12 @@ def main():
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(render_html(report))
     print("wrote", html_path)
+    if args.wandb:
+        from src.monitoring.wandb_log import log_to_wandb
+        url = log_to_wandb(report, html_path, send_alerts=False)
+        if not url:
+            raise SystemExit("W&B logging requires WANDB_API_KEY")
+        print("Monitoring run:", url)
 
 
 if __name__ == "__main__":
