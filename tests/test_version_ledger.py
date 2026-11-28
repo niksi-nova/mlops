@@ -67,7 +67,7 @@ def test_build_version_ledger_schema():
         assert "digest" in v
         assert "created_at" in v
         assert "test_mae" in v
-        assert isinstance(v["test_mae"], (int, float))
+        assert v["test_mae"] is None or isinstance(v["test_mae"], (int, float))
         assert "git_commit" in v
         assert "dataset_version" in v
 
@@ -123,3 +123,15 @@ def test_build_version_ledger_cli_main(tmp_path: Path, monkeypatch: pytest.Monke
 
     content = json.loads(fake_output.read_text(encoding="utf-8"))
     assert content["layers"]["data"]["dataset_version"] == "delhi-data-v2"
+
+
+def test_live_ledger_uses_linked_source_and_collection_aliases(monkeypatch):
+    versions = [{"version": "v3", "aliases": ["production"], "source": "delhi-lightgbm_l1:v7"}]
+    monkeypatch.setattr("scripts.build_version_ledger.fetch_wandb_ledger_data", lambda *args: {
+        "model_versions": [{"version": "v7", "aliases": ["latest"]}],
+        "registry_versions": versions,
+    })
+    ledger = build_version_ledger()
+    assert ledger["source"] == "wandb"
+    assert ledger["registry"]["versions"] == versions
+    assert ledger["layers"]["model"]["version"] == "v7"

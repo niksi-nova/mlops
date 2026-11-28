@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-11-27T17:48:04.071507+00:00",
-  "source": "local_reports",
+  "generated_at": "2026-11-28T13:16:03.049913+00:00",
+  "source": "wandb",
   "layers": {
     "code": {
-      "git_commit": "3aeb8f728b1784d3b88132c9bd171d969497421e",
-      "branch": "main"
+      "git_commit": "0bc0c4f8546c00de9e920f9f1c858de7abd80d9a",
+      "branch": "phase3-wandb-live"
     },
     "data": {
       "dataset_version": "delhi-data-v2",
@@ -18,7 +18,7 @@
       "registry": "ghcr.io/niksi-nova/mlops",
       "tags": [
         "latest",
-        "sha-3aeb8f7"
+        "sha-0bc0c4f"
       ]
     },
     "config": {
@@ -30,40 +30,33 @@
       "artifact": "delhi-lightgbm_l1",
       "version": "v2",
       "aliases": [
-        "latest",
-        "production",
-        "staging"
+        "latest"
       ],
-      "digest": "d7b1a20f9e4c3b8a1e5d2c7f4a9b0e3d",
-      "created_at": "2026-11-08T17:55:37Z",
-      "test_mae": 30.6033,
-      "git_commit": "1ef5a29",
-      "dataset_version": "delhi-data-v2",
-      "description": "Production model: tuned LightGBM (L1 loss, 255 leaves, lr 0.02217)"
+      "digest": "533d0933d70bf428b638fae396427ab1",
+      "created_at": "2026-11-08T14:06:11Z",
+      "test_mae": 30.603271077989092,
+      "git_commit": "0d474af9b535285aecfbdec33893335a57493885",
+      "dataset_version": "delhi-data-v2"
     },
     {
       "artifact": "delhi-lightgbm_l1",
       "version": "v1",
-      "aliases": [
-        "candidate"
-      ],
-      "digest": "c5a0918e8d3b2a7f0d4c1b6e3f8a9d2c",
-      "created_at": "2026-11-07T16:47:36Z",
-      "test_mae": 30.6033,
-      "git_commit": "0d474af",
-      "dataset_version": "delhi-data-v2",
-      "description": "Candidate model passing Phase 2 automated quality gate"
+      "aliases": [],
+      "digest": "51bbeddfc8001be80e67171a2a6bf78b",
+      "created_at": "2026-10-20T11:47:45Z",
+      "test_mae": null,
+      "git_commit": null,
+      "dataset_version": null
     },
     {
       "artifact": "delhi-lightgbm_l1",
       "version": "v0",
       "aliases": [],
-      "digest": "b4e9807d7c2a1f6e9c3b0a5d2e7f8c1b",
-      "created_at": "2026-11-07T14:03:05Z",
-      "test_mae": 37.5055,
-      "git_commit": "4fc9576",
-      "dataset_version": "delhi-data-v2",
-      "description": "Initial untuned baseline LightGBM model"
+      "digest": "79caab6f972fb9cc13e4a362527a3555",
+      "created_at": "2026-10-20T10:03:14Z",
+      "test_mae": null,
+      "git_commit": null,
+      "dataset_version": null
     }
   ],
   "registry": {
@@ -72,10 +65,10 @@
       {
         "version": "v0",
         "aliases": [
-          "production",
-          "staging",
           "candidate",
-          "latest"
+          "staging",
+          "latest",
+          "production"
         ],
         "source": "delhi-lightgbm_l1:v2"
       }
